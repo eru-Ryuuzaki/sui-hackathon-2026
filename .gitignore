@@ -51,3 +51,5 @@ temp/
 vendor/
 vendor/**/*
 !vendor/README.md
+
+/package-lock.json

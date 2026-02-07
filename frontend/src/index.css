@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-void-black text-neon-cyan font-mono overflow-hidden;
+  }
+}
+
+/* Custom Scrollbar for Webkit */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-void-black;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-titanium-grey;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-neon-cyan;
+}
