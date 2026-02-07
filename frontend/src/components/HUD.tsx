@@ -1,15 +1,17 @@
 import { Card } from '@/components/ui/Card';
 import { ConnectButton } from '@mysten/dapp-kit';
 import { useCurrentAccount } from '@mysten/dapp-kit';
+import { useUserStore } from '@/hooks/useUserStore';
 
 export function HUD() {
   const account = useCurrentAccount();
+  const { currentUser } = useUserStore();
   
-  // Mock Stats - In real app, fetch from chain based on account.address
+  // Mock Stats
   const stats = {
-    level: account ? 4 : 0,
-    exp: account ? '240/1000' : '0/0',
-    energy: account ? 8 : 0, // 0-10 scale
+    level: account ? (currentUser ? 1 : 0) : 0,
+    exp: account ? '0/1000' : '0/0',
+    energy: account ? 10 : 0, 
     status: account ? 'ONLINE' : 'OFFLINE'
   };
 
@@ -31,8 +33,14 @@ export function HUD() {
             </div>
           </div>
 
-          {account && (
+          {account && currentUser && (
             <>
+              <div>
+                <div className="text-xs text-titanium-grey mb-1">IDENTITY</div>
+                <div className="text-neon-cyan font-bold text-lg">{currentUser.codename}</div>
+                <div className="text-[10px] text-titanium-grey">AVATAR_ID: #{currentUser.avatarId}</div>
+              </div>
+
               <div>
                 <div className="text-xs text-titanium-grey mb-1">LEVEL</div>
                 <div className="text-neon-cyan">LVL.{stats.level} <span className="text-xs text-titanium-grey">({stats.exp})</span></div>
@@ -64,10 +72,14 @@ export function HUD() {
           <div className="text-matrix-green">&gt; System initialized.</div>
           <div className="text-matrix-green">&gt; Neural link established.</div>
           {account ? (
-             <>
-               <div className="text-matrix-green">&gt; Subject identified: {account.address.slice(0,6)}...</div>
-               <div className="text-neon-cyan">&gt; Construct loaded.</div>
-             </>
+             currentUser ? (
+               <>
+                 <div className="text-matrix-green">&gt; Identity verified.</div>
+                 <div className="text-neon-cyan">&gt; Welcome back, {currentUser.codename}.</div>
+               </>
+             ) : (
+               <div className="text-acid-yellow animate-pulse">&gt; UNIDENTIFIED SIGNAL.</div>
+             )
           ) : (
              <div className="text-titanium-grey animate-pulse">&gt; Waiting for subject connection...</div>
           )}

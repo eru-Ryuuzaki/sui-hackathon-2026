@@ -2,6 +2,13 @@
 
 由于智能合约尚未部署，以下功能暂时使用 Mock 数据或占位逻辑，待合约上线后需进行对接。
 
+## 0. 用户身份与首次登录 (User Identity & Onboarding)
+- [ ] **首次登录流程 (First Contact Protocol)**:
+  - [ ] 状态管理：实现 `LoginState` (Disconnected / Connected_Unknown / Connected_Verified)。
+  - [ ] 终端交互：实现“打字机风格”的昵称输入与头像分配流程。
+  - [ ] 头像生成：基于地址 Hash 的确定性随机头像分配算法。
+  - [ ] 数据持久化：暂时使用 `localStorage` 模拟后端存储。
+
 ## 1. 智能合约集成 (Smart Contract Integration)
 - [ ] **合约部署**:
   - [ ] 部署 `engram::core` 模块到 Sui Testnet/Mainnet。

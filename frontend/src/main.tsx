@@ -28,7 +28,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <SuiClientProvider networks={networkConfig} defaultNetwork="devnet">
-        <WalletProvider>
+        <WalletProvider 
+          autoConnect={true} 
+          storageKey="engram_wallet_state"
+          stashedWallet={{
+            name: 'ENGRAM Stashed Wallet'
+          }}
+        >
           <App />
         </WalletProvider>
       </SuiClientProvider>
