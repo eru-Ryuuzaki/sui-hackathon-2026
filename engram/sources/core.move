@@ -61,6 +61,7 @@ module engram::core {
         emotion_val: i8,    
         category: u8,
         is_encrypted: bool, // PRIVACY FEATURE
+        blob_id: Option<String>, // WALRUS INTEGRATION
     }
 
     /// Neural Badge (Achievement NFT)
@@ -83,6 +84,7 @@ module engram::core {
         timestamp: u64,
         category: u8,
         is_encrypted: bool,
+        has_attachment: bool,
         // We emit the content (or hash) here. 
         // If encrypted, this is ciphertext.
         content_snippet: String, 
@@ -163,6 +165,7 @@ module engram::core {
         emotion_val: i8,
         category: u8,
         is_encrypted: bool,
+        blob_id: Option<String>,
         ctx: &mut TxContext
     ) {
         let sender = tx_context::sender(ctx);
@@ -181,6 +184,7 @@ module engram::core {
             emotion_val,
             category,
             is_encrypted,
+            blob_id,
         };
 
         // Attach as Dynamic Field
@@ -203,6 +207,7 @@ module engram::core {
             timestamp,
             category,
             is_encrypted,
+            has_attachment: option::is_some(&blob_id),
             content_snippet: if (is_encrypted) { string::utf8(b"[ENCRYPTED]") } else { content },
         });
 

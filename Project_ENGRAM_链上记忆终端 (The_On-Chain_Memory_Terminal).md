@@ -53,14 +53,16 @@
 - **界面**：纯黑背景的终端窗口 (Terminal)，光标闪烁。
 - **输入指令**：
   - `> engrave "今天完成了Hackathon的核心代码，感觉肾上腺素飙升 #coding"`
+  - **附件模式 (Walrus Integration)**: `> engrave "Look at this view..." --attach ./photo.jpg` (Web 界面则为拖拽文件)
 - **链上逻辑 (PTB 原子化交易)**：
-  1. **Mint Shard**: 将文本内容打包为 `Memory Shard` 结构体。
-  2. **Attach**: 使用 `dynamic_field::add` 将 Shard 挂载到 **Construct** 的 ID 下。
-  3. **Update Metrics**: 消耗 Energy，增加 EXP。
-  4. **Check Badges**: 自动检测是否满足“连续刻录”条件，若满足，铸造 **Neural Badge**。
+  1. **Upload Blob**: 若包含附件，前端先将文件加密上传至 Walrus 网络，获取 `Blob ID`。
+  2. **Mint Shard**: 将文本内容及 `Blob ID` 打包为 `Memory Shard` 结构体。
+  3. **Attach**: 使用 `dynamic_field::add` 将 Shard 挂载到 **Construct** 的 ID 下。
+  4. **Update Metrics**: 消耗 Energy，增加 EXP。
+  5. **Check Badges**: 自动检测是否满足“连续刻录”条件，若满足，铸造 **Neural Badge**。
 - **反馈**：
   - 屏幕瞬间闪烁绿色代码雨。
-  - 显示：` MEMORY SHARD #402 SECURED ON-CHAIN.`
+  - 显示：` MEMORY SHARD #402 SECURED ON-CHAIN. BLOB ID: 0x8a...f2`
 
 #### 3.3 经济模型：普罗米修斯协议 (Project PROMETHEUS)
 
@@ -142,6 +144,8 @@ module engram::core {
         emotion_val: i8,
         category: u8,
         is_encrypted: bool, // [Update] 隐私开关
+        blob_id: Option<String>, // Walrus Blob ID (可选)
+        media_type: Option<String>, // e.g. "image/png"
     }
 
     /// 神经徽章
@@ -178,7 +182,10 @@ module engram::core {
 #### 4.4 存储策略 (Storage Strategy)
 
 - **文本 (Text)**: 100% On-Chain。利用 Sui 低廉的存储成本，确保记忆永存。
-- **图片/媒体 (Media)**: **MVP 阶段不支持**。为了赶在 2/12 交付，我们砍掉图片上传功能，专注于文字的深邃感和 UI 的酷炫感。这符合“终端机”的设定。
+- **媒体 (Media - Walrus Integration)**:
+  - 使用 Walrus Protocol 存储大文件（图片/音频）。
+  - **流程**: 前端加密文件 -> 上传 Walrus -> 获取 Blob ID -> 将 Blob ID 写入 Sui 的 `MemoryShard` 对象。
+  - **隐私**: Walrus 上存储的是加密二进制流，Sui 上存储的是引用。只有拥有私钥的用户能下载并解密查看。
 
 #### 4.3 隐私与加密 (Privacy & Encryption)
 
