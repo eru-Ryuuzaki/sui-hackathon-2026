@@ -8,21 +8,27 @@ export interface LogEntry {
   hash: string;
 }
 
-export function useMockHiveMind() {
+export function useMockHiveMind(isPaused: boolean = false) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
   useEffect(() => {
     // Initial population
-    const initialLogs = Array.from({ length: 5 }).map(() => generateRandomLog());
+    const initialLogs = Array.from({ length: 12 }).map(() => generateRandomLog());
     setLogs(initialLogs);
 
     // Live updates
     const interval = setInterval(() => {
-      setLogs(prev => [generateRandomLog(), ...prev].slice(0, 20));
+      if (!isPaused) {
+        setLogs(prev => {
+          const newLog = generateRandomLog();
+          // Keep only latest 12 logs (fit to screen without scroll)
+          return [newLog, ...prev].slice(0, 12);
+        });
+      }
     }, 3000 + Math.random() * 2000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isPaused]); // Dependency on isPaused to control updates
 
   return logs;
 }

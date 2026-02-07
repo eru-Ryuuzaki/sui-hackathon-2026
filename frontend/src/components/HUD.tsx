@@ -14,7 +14,7 @@ export function HUD() {
   };
 
   return (
-    <aside className="lg:col-span-3 space-y-6 flex flex-col">
+    <aside className="lg:col-span-3 space-y-6 flex flex-col h-full min-h-0">
       <Card className="shrink-0">
         <h1 className="text-3xl font-bold mb-2 font-heading tracking-widest text-white drop-shadow-[0_0_5px_rgba(0,243,255,0.8)]">ENGRAM</h1>
         <div className="text-xs text-titanium-grey mb-4">Ver 1.0.0 (MVP)</div>

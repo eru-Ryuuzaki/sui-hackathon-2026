@@ -99,7 +99,7 @@ export function Terminal() {
   };
 
   return (
-    <main className="lg:col-span-6 flex flex-col h-[600px] lg:h-auto">
+    <main className="lg:col-span-6 flex flex-col h-full min-h-0">
       <Card className="flex-1 flex flex-col h-full overflow-hidden">
          <div className="flex-1 overflow-y-auto mb-4 p-2 font-mono text-sm scrollbar-thin space-y-2">
             {history.map((line) => (
