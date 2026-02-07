@@ -1,7 +1,7 @@
 module engram::core {
     use std::string::{Self, String};
     use std::option::{Self, Option};
-    use sui::object::{Self, UID};
+    use sui::object::{Self, UID, ID};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
     use sui::clock::{Self, Clock};
@@ -42,6 +42,7 @@ module engram::core {
         backup_controller: Option<address>, // The "Escape Pod" key
         level: u64,
         exp: u64,
+        streak: u64,              // [New] Continuous engraving streak (days)
         vital_metrics: Metrics,
         shard_count: u64,
     }
@@ -58,7 +59,7 @@ module engram::core {
     public struct MemoryShard has store, drop, copy {
         timestamp: u64,
         content: String,
-        emotion_val: i8,    
+        emotion_val: u8,    
         category: u8,
         is_encrypted: bool, // PRIVACY FEATURE
         blob_id: Option<String>, // WALRUS INTEGRATION
@@ -115,6 +116,11 @@ module engram::core {
         transfer::share_object(hive);
     }
 
+    #[test_only]
+    public fun init_for_testing(ctx: &mut TxContext) {
+        init(ctx);
+    }
+
     /// 3.1 Jack In: Create the Construct
     public entry fun jack_in(
         hive: &mut HiveState,
@@ -139,6 +145,7 @@ module engram::core {
             backup_controller: option::none(),
             level: 1,
             exp: 0,
+            streak: 0,
             vital_metrics: metrics,
             shard_count: 0,
         };
@@ -162,7 +169,7 @@ module engram::core {
         hive: &mut HiveState,
         clock: &Clock,
         content: String,
-        emotion_val: i8,
+        emotion_val: u8,
         category: u8,
         is_encrypted: bool,
         blob_id: Option<String>,
@@ -189,6 +196,20 @@ module engram::core {
 
         // Attach as Dynamic Field
         dynamic_field::add(&mut construct.id, construct.shard_count, shard);
+
+        // Update Streak Logic
+        // Simple daily check: 86400000 ms per day
+        let one_day_ms = 86400000;
+        let last_day = construct.vital_metrics.last_update / one_day_ms;
+        let current_day = timestamp / one_day_ms;
+
+        if (current_day > last_day) {
+            if (current_day == last_day + 1) {
+                construct.streak = construct.streak + 1;
+            } else {
+                construct.streak = 1; // Reset if missed a day
+            }
+        };
 
         // Update Construct State
         construct.shard_count = construct.shard_count + 1;
@@ -264,6 +285,22 @@ module engram::core {
                     name: string::utf8(b"First Awakening"),
                     description: string::utf8(b"Recorded the first memory."),
                     rarity: 1,
+                    unlocked_at: 0, 
+                 };
+                 dynamic_object_field::add(&mut construct.id, badge_key, badge);
+                 hive.total_badges_issued = hive.total_badges_issued + 1;
+            } 
+        };
+
+        // Badge 2: The Consistent Mind (7-Day Streak)
+        if (construct.streak == 7) {
+            let badge_key = string::utf8(b"badge_7_day_streak");
+            if (!dynamic_object_field::exists_(&construct.id, badge_key)) {
+                 let badge = NeuralBadge {
+                    id: object::new(ctx),
+                    name: string::utf8(b"The Consistent Mind"),
+                    description: string::utf8(b"Maintained a 7-day memory streak."),
+                    rarity: 3, // Rare
                     unlocked_at: 0, 
                  };
                  dynamic_object_field::add(&mut construct.id, badge_key, badge);

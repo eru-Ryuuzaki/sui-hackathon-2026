@@ -41,3 +41,13 @@ Desktop.ini
 .trae/.cache/
 
 /tmp
+tmp/
+Temp/
+temp/
+
+*.tmp
+*.bak
+
+vendor/
+vendor/**/*
+!vendor/README.md
