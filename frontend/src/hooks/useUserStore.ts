@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware';
 export interface UserProfile {
   address: string;
   codename: string;
-  avatarId: number;
+  avatarSeed: string; // Changed from avatarId to avatarSeed
   createdAt: number;
 }
 
@@ -12,12 +12,11 @@ interface UserStore {
   users: Record<string, UserProfile>;
   currentUser: UserProfile | null;
   // Actions
-  login: (address: string) => boolean; // Returns true if user exists, false if new
+  login: (address: string) => boolean; 
   register: (address: string, codename: string) => void;
+  updateAvatar: (address: string, newSeed: string) => void; // New Action
   logout: () => void;
 }
-
-const AVATAR_COUNT = 10;
 
 export const useUserStore = create<UserStore>()(
   persist(
@@ -35,14 +34,10 @@ export const useUserStore = create<UserStore>()(
       },
 
       register: (address, codename) => {
-        // Deterministic avatar based on address hash
-        const hash = address.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        const avatarId = hash % AVATAR_COUNT;
-
         const newUser: UserProfile = {
           address,
           codename,
-          avatarId,
+          avatarSeed: address, // Default seed is address
           createdAt: Date.now(),
         };
 
@@ -50,6 +45,19 @@ export const useUserStore = create<UserStore>()(
           users: { ...state.users, [address]: newUser },
           currentUser: newUser,
         }));
+      },
+
+      updateAvatar: (address, newSeed) => {
+        set((state) => {
+          const updatedUser = { ...state.users[address], avatarSeed: newSeed };
+          // If updating current user, update that too
+          const newCurrentUser = state.currentUser?.address === address ? updatedUser : state.currentUser;
+          
+          return {
+            users: { ...state.users, [address]: updatedUser },
+            currentUser: newCurrentUser
+          };
+        });
       },
 
       logout: () => set({ currentUser: null }),

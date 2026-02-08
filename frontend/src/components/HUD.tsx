@@ -2,10 +2,14 @@ import { Card } from '@/components/ui/Card';
 import { ConnectButton } from '@mysten/dapp-kit';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { useUserStore } from '@/hooks/useUserStore';
+import { CyberAvatar } from '@/components/ui/CyberAvatar';
+import { useState } from 'react';
 
 export function HUD() {
   const account = useCurrentAccount();
-  const { currentUser } = useUserStore();
+  const { currentUser, updateAvatar } = useUserStore();
+  const [isHoveringAvatar, setIsHoveringAvatar] = useState(false);
+  const [isRerolling, setIsRerolling] = useState(false);
   
   // Mock Stats
   const stats = {
@@ -13,6 +17,19 @@ export function HUD() {
     exp: account ? '0/1000' : '0/0',
     energy: account ? 10 : 0, 
     status: account ? 'ONLINE' : 'OFFLINE'
+  };
+
+  const handleAvatarClick = () => {
+    if (!account || !currentUser || isRerolling) return;
+    
+    setIsRerolling(true);
+    
+    // Play glitch animation for 300ms then update
+    setTimeout(() => {
+       const newSeed = Math.random().toString(36).substring(7);
+       updateAvatar(account.address, newSeed);
+       setIsRerolling(false);
+    }, 300);
   };
 
   return (
@@ -37,8 +54,33 @@ export function HUD() {
             <>
               <div>
                 <div className="text-xs text-titanium-grey mb-1">IDENTITY</div>
-                <div className="text-neon-cyan font-bold text-lg">{currentUser.codename}</div>
-                <div className="text-[10px] text-titanium-grey">AVATAR_ID: #{currentUser.avatarId}</div>
+                <div className="flex items-center gap-2">
+                   <div 
+                     className="relative cursor-pointer group"
+                     onMouseEnter={() => setIsHoveringAvatar(true)}
+                     onMouseLeave={() => setIsHoveringAvatar(false)}
+                     onClick={handleAvatarClick}
+                     title="Click to re-roll avatar"
+                   >
+                     <CyberAvatar 
+                       seed={currentUser.avatarSeed} 
+                       size={48} 
+                       glitch={isRerolling || isHoveringAvatar}
+                       className="transition-all duration-300 group-hover:border-neon-cyan group-hover:shadow-[0_0_10px_rgba(0,243,255,0.5)]"
+                     />
+                     {/* Hover Overlay Text */}
+                     <div className={`absolute inset-0 flex items-center justify-center bg-black/60 text-[8px] text-neon-cyan font-bold pointer-events-none transition-opacity duration-200 ${isHoveringAvatar ? 'opacity-100' : 'opacity-0'}`}>
+                       REROLL
+                     </div>
+                   </div>
+                   
+                   <div className="flex-1 min-w-0">
+                     <div className="text-neon-cyan font-bold text-lg truncate">{currentUser.codename}</div>
+                     <div className="text-[10px] text-titanium-grey truncate font-mono">
+                        {account.address.slice(0,6)}...{account.address.slice(-4)}
+                     </div>
+                   </div>
+                </div>
               </div>
 
               <div>

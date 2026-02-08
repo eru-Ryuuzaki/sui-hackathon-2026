@@ -6,7 +6,7 @@ import { useUserStore } from '@/hooks/useUserStore';
 import { cn } from '@/utils/cn';
 
 import { MatrixRain } from '@/components/ui/MatrixRain';
-import { AsciiAvatar } from '@/components/ui/AsciiAvatar';
+import { CyberAvatar } from '@/components/ui/CyberAvatar';
 
 interface TerminalLine {
   id: string;
@@ -29,8 +29,7 @@ export function Terminal() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [bootSequence, setBootSequence] = useState(0);
   const [showMatrix, setShowMatrix] = useState(false);
-  const [avatarSeed, setAvatarSeed] = useState(0);
-  const [avatarRevealed, setAvatarRevealed] = useState(false);
+  const [avatarSeed, setAvatarSeed] = useState('');
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -115,7 +114,7 @@ export function Terminal() {
        }
 
        // Start Avatar Generation Sequence
-       const seed = account.address.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+       const seed = account.address;
        setAvatarSeed(seed);
        setHistory(prev => [...prev, { id: Math.random().toString(), type: 'success', content: `> CODENAME "${codename.toUpperCase()}" ACCEPTED.` }]);
        
@@ -125,7 +124,7 @@ export function Terminal() {
             type: 'system', 
             content: (
               <div className="flex items-center gap-4 my-2 p-2 border border-titanium-grey/30 bg-white/5 rounded">
-                <AsciiAvatar seed={seed} revealed={false} />
+                <CyberAvatar seed={seed} size={48} glitch={true} />
                 <div className="text-xs">
                   <div>GENERATING DIGITAL AVATAR...</div>
                   <div className="text-titanium-grey animate-pulse">PROCESSING HASH: {account.address.slice(0,10)}...</div>
@@ -137,7 +136,6 @@ export function Terminal() {
 
        // Reveal Avatar & Complete
        setTimeout(() => {
-          setAvatarRevealed(true);
           setShowMatrix(true); // Trigger Matrix Rain
           register(account.address, codename);
           
@@ -150,10 +148,10 @@ export function Terminal() {
               type: 'system', 
               content: (
                 <div className="flex items-center gap-4 my-2 p-2 border border-neon-cyan bg-neon-cyan/10 rounded shadow-[0_0_15px_rgba(0,243,255,0.3)]">
-                  <AsciiAvatar seed={seed} revealed={true} />
+                  <CyberAvatar seed={seed} size={64} glitch={false} className="border-neon-cyan" />
                   <div className="text-xs">
                     <div className="text-neon-cyan font-bold">AVATAR GENERATED</div>
-                    <div className="text-titanium-grey">ID: #{seed % 8}</div>
+                    <div className="text-titanium-grey font-mono text-[10px]">{seed.slice(0, 16)}...</div>
                   </div>
                 </div>
               ) 
