@@ -24,7 +24,12 @@ export function Terminal() {
   const { currentUser, login, register } = useUserStore();
   const { addLog } = useMemoryStore();
   const [command, setCommand] = useState('');
-  const [history, setHistory] = useState<TerminalLine[]>([
+  
+  // Effective connection state (Wallet OR zkLogin)
+  const isConnected = !!account || !!currentUser;
+  const currentAddress = account?.address || currentUser?.address;
+
+  const [history, setHistory] = useState<TerminalLine[]> ([
     { id: 'init', type: 'system', content: 'Welcome to ENGRAM. The On-Chain Memory Terminal.' },
     { id: 'init2', type: 'system', content: 'Connect your wallet to begin engraving.' }
   ]);
@@ -54,8 +59,8 @@ export function Terminal() {
 
   // Handle Wallet Connection & Login
   useEffect(() => {
-    if (account) {
-      const exists = login(account.address);
+    if (currentAddress) {
+      const exists = login(currentAddress);
       if (exists) {
         // Known User
         if (!history.some(l => l.content === `> SUBJECT IDENTIFIED: ${currentUser?.codename}`)) {
@@ -97,7 +102,7 @@ export function Terminal() {
       setBootSequence(0);
       setShowMatrix(false);
     }
-  }, [account]);
+  }, [currentAddress]); // React to address changes (including zkLogin)
 
   const handleCommand = (cmd: string) => {
     if (!cmd.trim()) return;
@@ -113,7 +118,7 @@ export function Terminal() {
     setCommand('');
 
     // INTERCEPT COMMAND FOR REGISTRATION
-    if (isRegistering && account) {
+    if (isRegistering && currentAddress) {
        const codename = cmd.trim();
        // Basic validation
        if (codename.length < 2 || codename.length > 20) {
@@ -129,7 +134,7 @@ export function Terminal() {
        }
 
        // Start Avatar Generation Sequence
-       const seed = account.address;
+       const seed = currentAddress;
        setHistory(prev => [...prev, { id: Math.random().toString(), type: 'success', content: `> CODENAME "${codename.toUpperCase()}" ACCEPTED.` }]);
        
        setTimeout(() => {
@@ -141,7 +146,7 @@ export function Terminal() {
                 <CyberAvatar seed={seed} size={48} glitch={true} />
                 <div className="text-xs">
                   <div>GENERATING DIGITAL AVATAR...</div>
-                  <div className="text-titanium-grey animate-pulse">PROCESSING HASH: {account.address.slice(0,10)}...</div>
+                  <div className="text-titanium-grey animate-pulse">PROCESSING HASH: {currentAddress.slice(0,10)}...</div>
                 </div>
               </div>
             ) 
@@ -151,7 +156,7 @@ export function Terminal() {
        // Reveal Avatar & Complete
        setTimeout(() => {
           setShowMatrix(true); // Trigger Matrix Rain
-          register(account.address, codename);
+          register(currentAddress, codename);
           
           setHistory(prev => {
             // Replace the loading avatar with revealed one
@@ -217,7 +222,7 @@ export function Terminal() {
         
         case 'log':
         case 'diary':
-           if (!account) {
+           if (!isConnected) {
              response = { id: Math.random().toString(), type: 'error', content: 'Access Denied. Connect wallet to log trace.' };
            } else {
              setMode('JOURNAL');
@@ -230,7 +235,7 @@ export function Terminal() {
           return;
         
         case 'reroll':
-           if (!account) {
+           if (!isConnected) {
              response = { id: Math.random().toString(), type: 'error', content: 'Connect wallet first.' };
            } else {
              response = { id: Math.random().toString(), type: 'system', content: 'Initiating avatar reconfiguration...' };
@@ -239,15 +244,15 @@ export function Terminal() {
            break;
 
         case 'whoami':
-           if (!account || !currentUser) {
+           if (!isConnected || !currentUser) {
              response = { id: Math.random().toString(), type: 'error', content: 'You are an unidentified signal. Please connect.' };
            } else {
-             response = { id: Math.random().toString(), type: 'system', content: `> SUBJECT: ${currentUser.codename} (ADDR: ${account.address.slice(0,6)}...)` };
+             response = { id: Math.random().toString(), type: 'system', content: `> SUBJECT: ${currentUser.codename} (ADDR: ${currentAddress?.slice(0,6)}...)` };
            }
            break;
 
         case 'engrave':
-          if (!account) {
+          if (!isConnected) {
              response = { id: Math.random().toString(), type: 'error', content: 'ERROR: Neural Link Disconnected. Please connect wallet first.' };
           } else if (args.length < 2) {
              response = { id: Math.random().toString(), type: 'error', content: 'Usage: engrave <your memory here>' };
@@ -275,10 +280,10 @@ export function Terminal() {
           break;
 
         case 'status':
-           if (!account) {
+           if (!isConnected) {
              response = { id: Math.random().toString(), type: 'error', content: 'Offline.' };
            } else {
-             response = { id: Math.random().toString(), type: 'system', content: `Construct Active. Owner: ${account.address}` };
+             response = { id: Math.random().toString(), type: 'system', content: `Construct Active. Owner: ${currentAddress}` };
            }
            break;
 
@@ -307,7 +312,7 @@ export function Terminal() {
   };
 
   const handleStatus = () => {
-     if (!account) {
+     if (!isConnected) {
         triggerAlert({ type: 'error', title: 'OFFLINE', message: 'Neural Link Disconnected.' });
         return;
      }
@@ -320,7 +325,7 @@ export function Terminal() {
             <div className="font-bold text-neon-cyan mb-2">=== SYSTEM STATUS REPORT ===</div>
             <div>STATUS: <span className="text-matrix-green">ONLINE</span></div>
             <div>USER: {currentUser?.codename || 'UNKNOWN'}</div>
-            <div>ADDR: {account.address}</div>
+            <div>ADDR: {currentAddress}</div>
             <div>MEMORY SHARDS: {useMemoryStore.getState().logs.length}</div>
             <div>SYNC_RATE: 100%</div>
          </div>
@@ -367,7 +372,7 @@ export function Terminal() {
                  ) : (
                    <>
                      <button 
-                       onClick={() => account ? setMode('JOURNAL') : triggerAlert({ type: 'warning', title: 'ACCESS DENIED', message: 'Connect wallet to log trace.' })}
+                       onClick={() => isConnected ? setMode('JOURNAL') : triggerAlert({ type: 'warning', title: 'ACCESS DENIED', message: 'Connect wallet to log trace.' })}
                        className="text-[10px] flex items-center gap-1 px-2 py-1 rounded border border-titanium-grey/30 hover:border-neon-cyan hover:text-neon-cyan transition-colors text-titanium-grey"
                        title="New Log Entry"
                      >
@@ -426,12 +431,12 @@ export function Terminal() {
                         value={command} 
                         onChange={(e) => setCommand(e.target.value)} 
                         placeholder={
-                          !account ? "Connect wallet to start..." : 
+                          !isConnected ? "Connect wallet to start..." : 
                           isRegistering ? (bootSequence >= 5 ? "Enter codename..." : "Initializing...") : "Enter command..."
                         }
-                        disabled={(!account && command !== 'help' && command !== 'clear') || (isRegistering && bootSequence < 5)} 
+                        disabled={(!isConnected && command !== 'help' && command !== 'clear') || (isRegistering && bootSequence < 5)} 
                         prefixText={
-                           !account ? "guest@engram:~$" :
+                           !isConnected ? "guest@engram:~$" :
                            isRegistering ? "identity@protocol:~$" :
                            `${currentUser?.codename || 'user'}@engram:~$`
                         }
@@ -444,7 +449,7 @@ export function Terminal() {
                         className={isRegistering ? "h-12 text-lg" : ""}
                       />
                       <div className="text-[10px] text-titanium-grey mt-2 flex justify-between px-1">
-                         <span>STATUS: {account ? (isRegistering ? 'IDENTIFYING...' : 'LINKED') : 'UNLINKED'}</span>
+                         <span>STATUS: {isConnected ? (isRegistering ? 'IDENTIFYING...' : 'LINKED') : 'UNLINKED'}</span>
                          <span>Type 'help' for commands</span>
                       </div>
                    </div>

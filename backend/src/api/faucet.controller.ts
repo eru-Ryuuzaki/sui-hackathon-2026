@@ -11,7 +11,7 @@ class ClaimFaucetDto {
 }
 
 @ApiTags('Faucet')
-@Controller('api/faucet')
+@Controller('faucet')
 export class FaucetController {
   private readonly logger = new Logger(FaucetController.name);
 

@@ -20,6 +20,8 @@ const memory_shard_entity_1 = require("./entities/memory-shard.entity");
 const neural_badge_entity_1 = require("./entities/neural-badge.entity");
 const event_cursor_entity_1 = require("./entities/event-cursor.entity");
 const indexer_module_1 = require("./indexer/indexer.module");
+const sui_module_1 = require("./sui/sui.module");
+const api_module_1 = require("./api/api.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -56,6 +58,8 @@ exports.AppModule = AppModule = __decorate([
             schedule_1.ScheduleModule.forRoot(),
             nestjs_prometheus_1.PrometheusModule.register(),
             indexer_module_1.IndexerModule,
+            api_module_1.ApiModule,
+            sui_module_1.SuiModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

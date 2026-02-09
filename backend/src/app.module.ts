@@ -11,6 +11,8 @@ import { MemoryShard } from './entities/memory-shard.entity';
 import { NeuralBadge } from './entities/neural-badge.entity';
 import { EventCursor } from './entities/event-cursor.entity';
 import { IndexerModule } from './indexer/indexer.module';
+import { SuiModule } from './sui/sui.module';
+import { ApiModule } from './api/api.module';
 
 @Module({
   imports: [
@@ -44,6 +46,8 @@ import { IndexerModule } from './indexer/indexer.module';
     ScheduleModule.forRoot(),
     PrometheusModule.register(),
     IndexerModule,
+    ApiModule,
+    SuiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

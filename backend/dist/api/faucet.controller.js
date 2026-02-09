@@ -60,7 +60,7 @@ __decorate([
 ], FaucetController.prototype, "claim", null);
 exports.FaucetController = FaucetController = FaucetController_1 = __decorate([
     (0, swagger_1.ApiTags)('Faucet'),
-    (0, common_1.Controller)('api/faucet'),
+    (0, common_1.Controller)('faucet'),
     __metadata("design:paramtypes", [sui_service_1.SuiService])
 ], FaucetController);
 //# sourceMappingURL=faucet.controller.js.map

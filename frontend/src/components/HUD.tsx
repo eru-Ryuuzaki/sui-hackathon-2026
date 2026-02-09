@@ -9,28 +9,38 @@ import { Power, Radio } from 'lucide-react';
 export function HUD() {
   const account = useCurrentAccount();
   const { mutate: disconnect } = useDisconnectWallet();
-  const { currentUser, updateAvatar } = useUserStore();
+  const { currentUser, updateAvatar, logout } = useUserStore(); // Added logout
   const [isHoveringAvatar, setIsHoveringAvatar] = useState(false);
   const [isRerolling, setIsRerolling] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   
+  // Determine effective connection state (Wallet OR zkLogin)
+  const isConnected = !!account || !!currentUser;
+  const currentAddress = account?.address || currentUser?.address;
+  const connectionType = account ? 'WALLET' : 'ZKLOGIN';
+
   // Mock Stats
   const stats = {
-    level: account ? (currentUser ? 1 : 0) : 0,
-    exp: account ? '0/1000' : '0/0',
-    energy: account ? 10 : 0, 
-    status: account ? 'ONLINE' : 'OFFLINE'
+    level: isConnected ? 1 : 0,
+    exp: isConnected ? '0/1000' : '0/0',
+    energy: isConnected ? 10 : 0, 
+    status: isConnected ? 'ONLINE' : 'OFFLINE'
+  };
+
+  const handleDisconnect = () => {
+      if (account) disconnect();
+      logout();
   };
 
   const handleAvatarClick = () => {
-    if (!account || !currentUser || isRerolling) return;
+    if (!isConnected || !currentUser || isRerolling) return;
     
     setIsRerolling(true);
     
     // Play glitch animation for 300ms then update
     setTimeout(() => {
        const newSeed = Math.random().toString(36).substring(7);
-       updateAvatar(account.address, newSeed);
+       if (currentAddress) updateAvatar(currentAddress, newSeed);
        setIsRerolling(false);
     }, 300);
   };
@@ -56,7 +66,7 @@ export function HUD() {
              />
            </div>
 
-           {!account ? (
+           {!isConnected ? (
              <button 
                onClick={() => setIsLoginOpen(true)}
                className="group relative px-6 py-2 bg-transparent border border-neon-cyan text-neon-cyan font-mono text-sm tracking-widest overflow-hidden hover:text-void-black transition-colors"
@@ -69,7 +79,7 @@ export function HUD() {
              </button>
            ) : (
              <button 
-               onClick={() => disconnect()}
+               onClick={handleDisconnect}
                className="group relative px-6 py-2 bg-transparent border border-glitch-red/50 text-glitch-red font-mono text-sm tracking-widest overflow-hidden hover:text-void-black transition-colors"
              >
                <div className="absolute inset-0 bg-glitch-red translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 z-0" />
@@ -85,11 +95,11 @@ export function HUD() {
           <div>
             <div className="text-xs text-titanium-grey mb-1">STATUS</div>
             <div className={`text-sm ${stats.status === 'ONLINE' ? 'text-matrix-green animate-pulse' : 'text-glitch-red'}`}>
-              ● {stats.status}
+              ● {stats.status} <span className="text-[10px] text-titanium-grey ml-2">via {connectionType}</span>
             </div>
           </div>
 
-          {account && currentUser && (
+          {isConnected && currentUser && (
             <>
               <div>
                 <div className="text-xs text-titanium-grey mb-1">IDENTITY</div>
@@ -116,7 +126,7 @@ export function HUD() {
                    <div className="flex-1 min-w-0">
                      <div className="text-neon-cyan font-bold text-lg truncate">{currentUser.codename}</div>
                      <div className="text-[10px] text-titanium-grey truncate font-mono">
-                        {account.address.slice(0,6)}...{account.address.slice(-4)}
+                        {currentAddress?.slice(0,6)}...{currentAddress?.slice(-4)}
                      </div>
                    </div>
                 </div>
@@ -152,7 +162,7 @@ export function HUD() {
         <div className="text-xs space-y-1 overflow-y-auto flex-1 font-mono scrollbar-thin">
           <div className="text-matrix-green">&gt; System initialized.</div>
           <div className="text-matrix-green">&gt; Neural link established.</div>
-          {account ? (
+          {isConnected ? (
              currentUser ? (
                <>
                  <div className="text-matrix-green">&gt; Identity verified.</div>

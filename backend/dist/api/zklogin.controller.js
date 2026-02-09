@@ -51,6 +51,7 @@ const swagger_1 = require("@nestjs/swagger");
 const crypto = __importStar(require("crypto"));
 let ZkLoginController = class ZkLoginController {
     MASTER_SEED = 'ENGRAM_MASTER_SEED_2026';
+    BN254_PRIME = BigInt('21888242871839275222246405745257275088548364400416034343698204186575808495617');
     getSalt(sub) {
         if (!sub) {
             throw new common_1.HttpException('Subject (sub) is required', common_1.HttpStatus.BAD_REQUEST);
@@ -59,7 +60,10 @@ let ZkLoginController = class ZkLoginController {
         hash.update(this.MASTER_SEED);
         hash.update(sub);
         const salt = hash.digest('hex');
-        const saltBigInt = BigInt('0x' + salt);
+        let saltBigInt = BigInt('0x' + salt) % this.BN254_PRIME;
+        if (saltBigInt === 0n) {
+            saltBigInt = 1n;
+        }
         return {
             salt: saltBigInt.toString(),
             sub: sub

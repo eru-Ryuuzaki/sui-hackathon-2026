@@ -15,6 +15,7 @@ export class ZkLoginController {
   // For this hackathon/demo, we will derive a deterministic salt from the subject ID 
   // using a fixed "Master Seed" on the server.
   private readonly MASTER_SEED = 'ENGRAM_MASTER_SEED_2026';
+  private readonly BN254_PRIME = BigInt('21888242871839275222246405745257275088548364400416034343698204186575808495617');
 
   @Get('salt')
   @ApiOperation({ summary: 'Get the salt for a specific JWT subject' })
@@ -31,11 +32,11 @@ export class ZkLoginController {
     hash.update(sub);
     const salt = hash.digest('hex'); // Returns a big integer as hex string
     
-    // Salt for zkLogin must be a numeric string or BigInt usually, 
-    // but the SDK handles hex or string. 
-    // Typically it's a large integer.
-    // Let's return it as a string representation of the BigInt to be safe.
-    const saltBigInt = BigInt('0x' + salt);
+    // Map salt into BN254 field to avoid "Element not in the BN254 field" errors
+    let saltBigInt = BigInt('0x' + salt) % this.BN254_PRIME;
+    if (saltBigInt === 0n) {
+      saltBigInt = 1n;
+    }
     
     return {
       salt: saltBigInt.toString(),

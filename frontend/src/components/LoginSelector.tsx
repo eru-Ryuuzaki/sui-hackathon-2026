@@ -5,7 +5,7 @@ import { Wallet, ScanFace, Lock, ChevronLeft, Download } from 'lucide-react';
 import { triggerAlert } from '@/components/ui/SystemAlert';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
-const REDIRECT_URI = window.location.origin + '/auth/callback';
+const REDIRECT_URI = (import.meta.env.VITE_GOOGLE_REDIRECT_URI as string | undefined) || (window.location.origin + '/auth/callback');
 
 interface LoginSelectorProps {
   isOpen: boolean;
@@ -53,6 +53,10 @@ export function LoginSelector({ isOpen, onClose }: LoginSelectorProps) {
       return;
     }
     setIsRedirecting(true);
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    const nonce = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    sessionStorage.setItem('engram_oauth_nonce', nonce);
     const params = new URLSearchParams({
       client_id: GOOGLE_CLIENT_ID,
       response_type: 'id_token',
@@ -60,6 +64,7 @@ export function LoginSelector({ isOpen, onClose }: LoginSelectorProps) {
       scope: 'openid email profile',
       state: 'engram_login_state',
       prompt: 'select_account',
+      nonce,
     });
     const loginUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
     window.location.href = loginUrl;

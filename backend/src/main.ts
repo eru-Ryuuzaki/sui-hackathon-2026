@@ -9,6 +9,8 @@ async function bootstrap() {
   
   // Use structured logger
   app.useLogger(app.get(Logger));
+  // Global API prefix to match frontend proxy "/api"
+  app.setGlobalPrefix('api');
 
   // Validation
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
