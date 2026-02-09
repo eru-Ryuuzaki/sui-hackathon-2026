@@ -2,9 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { useUserStore } from '@/hooks/useUserStore';
 import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { useCurrentAccount } from '@mysten/dapp-kit';
-import { format, differenceInSeconds, isBefore, isAfter, startOfDay, addDays } from 'date-fns';
+import { format, differenceInSeconds, isBefore, isAfter } from 'date-fns';
 import { triggerAlert } from '@/components/ui/SystemAlert';
-import { LOG_TEMPLATES, getTypesForCategory, getTemplates, LogTemplateCategory, LogTemplateItem } from '@/data/logTemplates';
+import { LOG_TEMPLATES, getTypesForCategory, getTemplates, type LogTemplateCategory, type LogTemplateItem } from '@/data/logTemplates';
 import { 
   Terminal as TerminalIcon, 
   Activity, 
@@ -14,8 +14,7 @@ import {
   Cloud,
   Smile,
   Zap,
-  ChevronDown,
-  ChevronRight
+  ChevronDown
 } from 'lucide-react';
 
 // --- Constants ---
@@ -41,7 +40,6 @@ export function JournalEditor({ onExit }: JournalEditorProps) {
   // Template & Customization State
   const [selectedTemplate, setSelectedTemplate] = useState<LogTemplateItem | null>(null);
   const [isCustomMessage, setIsCustomMessage] = useState(false);
-  const [isCustomIcon, setIsCustomIcon] = useState(false);
   const [body, setBody] = useState('');
   const [icon, setIcon] = useState('📝');
   
@@ -75,7 +73,6 @@ export function JournalEditor({ onExit }: JournalEditorProps) {
     // Reset Template
     setSelectedTemplate(null);
     setIsCustomMessage(false);
-    setIsCustomIcon(false);
 
     // Special Case: System Category Auto-fill
     if (category === 'system') {
@@ -125,7 +122,6 @@ export function JournalEditor({ onExit }: JournalEditorProps) {
     } else {
       setSelectedTemplate(tmpl);
       setIsCustomMessage(false);
-      setIsCustomIcon(false);
       setBody(tmpl.msg);
       setIcon(tmpl.icon);
     }
@@ -138,7 +134,6 @@ export function JournalEditor({ onExit }: JournalEditorProps) {
 
   const handleIconChange = (newIcon: string) => {
     setIcon(newIcon);
-    setIsCustomIcon(true);
     setShowIconPicker(false);
   };
 
