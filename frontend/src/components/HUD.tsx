@@ -5,6 +5,7 @@ import { CyberAvatar } from '@/components/ui/CyberAvatar';
 import { LoginSelector } from '@/components/LoginSelector';
 import { useState } from 'react';
 import { Power, Radio } from 'lucide-react';
+import { triggerAlert } from '@/components/ui/SystemAlert';
 
 export function HUD() {
   const account = useCurrentAccount();
@@ -12,6 +13,7 @@ export function HUD() {
   const { currentUser, updateAvatar, logout } = useUserStore(); // Added logout
   const [isHoveringAvatar, setIsHoveringAvatar] = useState(false);
   const [isRerolling, setIsRerolling] = useState(false);
+  const [hasRerolledInHover, setHasRerolledInHover] = useState(false); // Track if rerolled during current hover
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   
   // Determine effective connection state (Wallet OR zkLogin)
@@ -42,7 +44,20 @@ export function HUD() {
        const newSeed = Math.random().toString(36).substring(7);
        if (currentAddress) updateAvatar(currentAddress, newSeed);
        setIsRerolling(false);
+       setHasRerolledInHover(true); // Mark as rerolled to stop glitch loop
+
+       triggerAlert({
+         type: 'success',
+         title: 'IDENTITY RECONFIGURED',
+         message: 'Digital avatar hash successfully updated.',
+         duration: 2000
+       });
     }, 300);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHoveringAvatar(false);
+    setHasRerolledInHover(false); // Reset for next interaction
   };
 
   return (
@@ -107,18 +122,18 @@ export function HUD() {
                    <div 
                      className="relative cursor-pointer group"
                      onMouseEnter={() => setIsHoveringAvatar(true)}
-                     onMouseLeave={() => setIsHoveringAvatar(false)}
+                     onMouseLeave={handleMouseLeave}
                      onClick={handleAvatarClick}
                      title="Click to re-roll avatar"
                    >
                      <CyberAvatar 
                        seed={currentUser.avatarSeed} 
                        size={48} 
-                       glitch={isRerolling || isHoveringAvatar}
+                       glitch={isRerolling || (isHoveringAvatar && !hasRerolledInHover)}
                        className="transition-all duration-300 group-hover:border-neon-cyan group-hover:shadow-[0_0_10px_rgba(0,243,255,0.5)]"
                      />
                      {/* Hover Overlay Text */}
-                     <div className={`absolute inset-0 flex items-center justify-center bg-black/60 text-[8px] text-neon-cyan font-bold pointer-events-none transition-opacity duration-200 ${isHoveringAvatar ? 'opacity-100' : 'opacity-0'}`}>
+                     <div className={`absolute inset-0 flex items-center justify-center bg-black/60 text-[8px] text-neon-cyan font-bold pointer-events-none transition-opacity duration-200 ${isHoveringAvatar && !hasRerolledInHover ? 'opacity-100' : 'opacity-0'}`}>
                        REROLL
                      </div>
                    </div>
