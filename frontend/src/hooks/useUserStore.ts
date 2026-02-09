@@ -4,7 +4,8 @@ import { persist } from 'zustand/middleware';
 export interface UserProfile {
   address: string;
   codename: string;
-  avatarSeed: string; // Changed from avatarId to avatarSeed
+  avatarSeed: string; 
+  birthday?: string; // ISO Date string
   createdAt: number;
 }
 
@@ -14,7 +15,8 @@ interface UserStore {
   // Actions
   login: (address: string) => boolean; 
   register: (address: string, codename: string) => void;
-  updateAvatar: (address: string, newSeed: string) => void; // New Action
+  updateAvatar: (address: string, newSeed: string) => void;
+  updateBirthday: (address: string, birthday: string) => void; // New Action
   logout: () => void;
 }
 
@@ -37,7 +39,7 @@ export const useUserStore = create<UserStore>()(
         const newUser: UserProfile = {
           address,
           codename,
-          avatarSeed: address, // Default seed is address
+          avatarSeed: address, 
           createdAt: Date.now(),
         };
 
@@ -50,7 +52,18 @@ export const useUserStore = create<UserStore>()(
       updateAvatar: (address, newSeed) => {
         set((state) => {
           const updatedUser = { ...state.users[address], avatarSeed: newSeed };
-          // If updating current user, update that too
+          const newCurrentUser = state.currentUser?.address === address ? updatedUser : state.currentUser;
+          
+          return {
+            users: { ...state.users, [address]: updatedUser },
+            currentUser: newCurrentUser
+          };
+        });
+      },
+
+      updateBirthday: (address, birthday) => {
+        set((state) => {
+          const updatedUser = { ...state.users[address], birthday };
           const newCurrentUser = state.currentUser?.address === address ? updatedUser : state.currentUser;
           
           return {

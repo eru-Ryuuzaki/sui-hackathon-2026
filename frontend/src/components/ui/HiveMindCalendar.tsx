@@ -33,6 +33,7 @@ interface HiveMindCalendarProps {
 // --- Helper: Extract Icon ---
 function extractIcon(log: CalendarLog): string {
   if (log.icon) return log.icon;
+  if (!log.content) return '?';
   
   // Try regex match emoji
   const emojiMatch = log.content.match(/[\u{1F300}-\u{1F9FF}]/u);
@@ -109,8 +110,8 @@ export function HiveMindCalendar({ logs, isOpen, onClose, onDateClick }: HiveMin
 
         {/* Grid Header */}
         <div className="grid grid-cols-7 border-b border-titanium-grey/30 bg-void-black shrink-0">
-          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => (
-            <div key={day} className="py-1 text-center text-[10px] text-titanium-grey font-mono">
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+            <div key={`${day}-${i}`} className="py-1 text-center text-[10px] text-titanium-grey font-mono">
               {day}
             </div>
           ))}

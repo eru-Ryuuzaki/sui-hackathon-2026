@@ -2,28 +2,30 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { HiveMindCalendar } from '@/components/ui/HiveMindCalendar';
 import { format } from 'date-fns';
-
-// Mock Data (replace with real data later)
-const MOCK_LOGS = Array.from({ length: 50 }).map((_, i) => ({
-  id: i.toString(),
-  date: new Date(Date.now() - i * 1000 * 60 * 60 * 5), // Spread over time
-  content: i % 3 === 0 ? `[SYSTEM] Memory shard #${i} engraved.` : `User note: Today was a good day #${i}`,
-  icon: i % 3 === 0 ? '💾' : i % 5 === 0 ? '🌟' : undefined,
-  emotionVal: 50 + (i % 50),
-  hash: `0x${Math.random().toString(16).slice(2, 10)}...`
-}));
+import { useMemoryStore } from '@/hooks/useMemoryStore';
 
 export function HiveMind() {
-  const [isCalendarOpen, setIsCalendarOpen] = useState(true); // Always true or remove state
+  const { logs } = useMemoryStore();
+  const [isCalendarOpen, setIsCalendarOpen] = useState(true);
+
+  // Convert logs for Calendar
+  const calendarLogs = logs.map(log => ({
+    id: log.id,
+    date: new Date(log.timestamp),
+    content: log.content || '',
+    type: log.type,
+    emotionVal: log.metadata?.energy || 50,
+    icon: log.metadata?.mood // Use mood as icon if available
+  }));
 
   return (
     <aside className="lg:col-span-3 flex flex-col h-full min-h-0 space-y-4">
       {/* Top: Calendar (Fixed Height ~40%) */}
       <div className="h-[40%] min-h-[300px]">
         <HiveMindCalendar 
-          logs={MOCK_LOGS}
+          logs={calendarLogs}
           isOpen={true}
-          onClose={() => {}} // No close needed
+          onClose={() => {}} 
           onDateClick={(date) => console.log('Clicked date:', date)}
         />
       </div>
@@ -38,7 +40,7 @@ export function HiveMind() {
           </div>
           
           <div className="space-y-3 overflow-hidden flex-1 min-h-0 mask-image-gradient-b">
-             {MOCK_LOGS.slice(0, 5).map((log, index) => { // Limit to 5 for absolute safety (No Scroll)
+             {logs.slice(0, 5).map((log, index) => { // Limit to 5 for absolute safety (No Scroll)
                let containerClass = "p-3 border-l-2 transition-all duration-300 group/item backdrop-blur-sm ";
                let textClass = "text-xs font-mono transition-colors ";
                let subjectClass = "font-bold text-[10px] mb-1 transition-colors ";
@@ -78,15 +80,15 @@ export function HiveMind() {
                    }}
                  >
                    <div className="flex justify-between items-start">
-                     <div className={subjectClass}>SUBJECT_#{log.id.padStart(4, '0')}</div>
-                     <div className={actionClass}>{format(log.date, 'HH:mm:ss')}</div>
+                     <div className={subjectClass}>{log.category}</div>
+                     <div className={actionClass}>{format(new Date(log.timestamp), 'HH:mm:ss')}</div>
                    </div>
                    <div className={textClass}>
                      {log.content}
                    </div>
                    <div className="flex justify-between items-end mt-1">
                       <div className={hashClass}>{log.hash}</div>
-                      {log.icon && <div className="text-xs opacity-50">{log.icon}</div>}
+                      {log.metadata?.mood && <div className="text-xs opacity-50">{log.metadata.mood}</div>}
                    </div>
                  </div>
                );

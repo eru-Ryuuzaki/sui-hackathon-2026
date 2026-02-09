@@ -8,6 +8,10 @@
   - [ ] 终端交互：实现“打字机风格”的昵称输入与头像分配流程。
   - [ ] 头像生成：基于地址 Hash 的确定性随机头像分配算法。
   - [ ] 数据持久化：暂时使用 `localStorage` 模拟后端存储。
+- [ ] **zkLogin 集成 (Google OAuth)**:
+  - [ ] 申请 Google Cloud `CLIENT_ID` 并配置 OAuth 凭证。
+  - [ ] 替换 `LoginSelector.tsx` 中的 Mock 逻辑为真实 OAuth 跳转。
+  - [ ] 集成 `@mysten/zklogin` SDK 生成零知识证明。
 
 ## 1. 智能合约集成 (Smart Contract Integration)
 - [ ] **合约部署**:

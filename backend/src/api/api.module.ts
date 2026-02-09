@@ -5,6 +5,7 @@ import { HiveController } from './hive.controller';
 import { MemoryController } from './memory.controller';
 import { ConstructController } from './construct.controller';
 import { TransactionController } from './transaction.controller';
+import { ZkLoginController } from './zklogin.controller';
 import { Construct } from '../entities/construct.entity';
 import { MemoryShard } from '../entities/memory-shard.entity';
 import { NeuralBadge } from '../entities/neural-badge.entity';
@@ -19,6 +20,7 @@ import { NeuralBadge } from '../entities/neural-badge.entity';
     MemoryController,
     ConstructController,
     TransactionController,
+    ZkLoginController,
   ],
 })
 export class ApiModule {}

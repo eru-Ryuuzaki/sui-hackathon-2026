@@ -12,7 +12,7 @@ export default {
         'matrix-green': '#00ff41',
         'acid-yellow': '#f0ff00',
         'glitch-red': '#ff003c',
-        'titanium-grey': '#3d3d3d',
+        'titanium-grey': '#8a8a8a', // Brightened from #3d3d3d for better visibility
       },
       fontFamily: {
         mono: ['"JetBrains Mono"', '"Space Mono"', 'monospace'],

@@ -1,15 +1,18 @@
 import { Card } from '@/components/ui/Card';
-import { ConnectButton } from '@mysten/dapp-kit';
-import { useCurrentAccount } from '@mysten/dapp-kit';
+import { useCurrentAccount, useDisconnectWallet, ConnectButton } from '@mysten/dapp-kit';
 import { useUserStore } from '@/hooks/useUserStore';
 import { CyberAvatar } from '@/components/ui/CyberAvatar';
+import { LoginSelector } from '@/components/LoginSelector';
 import { useState } from 'react';
+import { Power, Radio } from 'lucide-react';
 
 export function HUD() {
   const account = useCurrentAccount();
+  const { mutate: disconnect } = useDisconnectWallet();
   const { currentUser, updateAvatar } = useUserStore();
   const [isHoveringAvatar, setIsHoveringAvatar] = useState(false);
   const [isRerolling, setIsRerolling] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
   
   // Mock Stats
   const stats = {
@@ -34,12 +37,48 @@ export function HUD() {
 
   return (
     <aside className="lg:col-span-3 space-y-6 flex flex-col h-full min-h-0">
+      <LoginSelector isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+      
       <Card className="shrink-0">
         <h1 className="text-3xl font-bold mb-2 font-heading tracking-widest text-white drop-shadow-[0_0_5px_rgba(0,243,255,0.8)]">ENGRAM</h1>
-        <div className="text-xs text-titanium-grey mb-4">Ver 1.0.0 (MVP)</div>
+        <div className="text-xs text-titanium-grey mb-4 flex items-center gap-2">
+           <span>Ver 1.0.0</span>
+           <span className="w-1 h-1 bg-neon-cyan rounded-full animate-pulse" />
+           <span className="text-neon-cyan/70">NET_ACTIVE</span>
+        </div>
         
         <div className="flex justify-center mb-6">
-           <ConnectButton className="!bg-transparent !text-neon-cyan !border !border-neon-cyan !font-mono !rounded-none hover:!bg-neon-cyan hover:!text-void-black transition-colors" />
+           {/* Hidden Connect Button for Programmatic Access */}
+           <div className="hidden">
+             <ConnectButton 
+               id="engram-hidden-connect-btn"
+               connectText="CONNECT"
+             />
+           </div>
+
+           {!account ? (
+             <button 
+               onClick={() => setIsLoginOpen(true)}
+               className="group relative px-6 py-2 bg-transparent border border-neon-cyan text-neon-cyan font-mono text-sm tracking-widest overflow-hidden hover:text-void-black transition-colors"
+             >
+               <div className="absolute inset-0 bg-neon-cyan translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 z-0" />
+               <span className="relative z-10 flex items-center gap-2">
+                 <Radio size={14} className="animate-pulse" />
+                 [ LINK NEURAL INTERFACE ]
+               </span>
+             </button>
+           ) : (
+             <button 
+               onClick={() => disconnect()}
+               className="group relative px-6 py-2 bg-transparent border border-glitch-red/50 text-glitch-red font-mono text-sm tracking-widest overflow-hidden hover:text-void-black transition-colors"
+             >
+               <div className="absolute inset-0 bg-glitch-red translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 z-0" />
+               <span className="relative z-10 flex items-center gap-2">
+                 <Power size={14} />
+                 [ TERMINATE LINK ]
+               </span>
+             </button>
+           )}
         </div>
 
         <div className="space-y-4 font-mono">

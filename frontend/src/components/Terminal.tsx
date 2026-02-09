@@ -3,10 +3,15 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { useUserStore } from '@/hooks/useUserStore';
+import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { cn } from '@/utils/cn';
+import { triggerAlert } from '@/components/ui/SystemAlert';
 
 import { MatrixRain } from '@/components/ui/MatrixRain';
 import { CyberAvatar } from '@/components/ui/CyberAvatar';
+import { JournalEditor } from '@/components/ui/JournalEditor';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Terminal as TerminalIcon, PlusSquare, Trash2, Activity, HelpCircle } from 'lucide-react';
 
 interface TerminalLine {
   id: string;
@@ -17,6 +22,7 @@ interface TerminalLine {
 export function Terminal() {
   const account = useCurrentAccount();
   const { currentUser, login, register } = useUserStore();
+  const { addLog } = useMemoryStore();
   const [command, setCommand] = useState('');
   const [history, setHistory] = useState<TerminalLine[]>([
     { id: 'init', type: 'system', content: 'Welcome to ENGRAM. The On-Chain Memory Terminal.' },
@@ -31,16 +37,21 @@ export function Terminal() {
   const [showMatrix, setShowMatrix] = useState(false);
   const [avatarSeed, setAvatarSeed] = useState('');
 
+  // Mode State (CLI vs Journal)
+  const [mode, setMode] = useState<'CLI' | 'JOURNAL'>('CLI');
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [history]);
+    if (mode === 'CLI') {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [history, mode]);
 
   // Focus input on register mode
   useEffect(() => {
-    if (isRegistering) {
+    if (isRegistering && mode === 'CLI') {
       inputRef.current?.focus();
     }
-  }, [isRegistering]);
+  }, [isRegistering, mode]);
 
   // Handle Wallet Connection & Login
   useEffect(() => {
@@ -109,6 +120,11 @@ export function Terminal() {
        if (codename.length < 2 || codename.length > 20) {
           setTimeout(() => {
             setHistory(prev => [...prev, { id: Math.random().toString(), type: 'error', content: '> ERROR: CODENAME MUST BE 2-20 CHARS.' }]);
+            triggerAlert({
+              type: 'error',
+              title: 'IDENTITY REJECTED',
+              message: 'Codename format invalid. Length requirements: 2-20 characters.'
+            });
           }, 200);
           return;
        }
@@ -189,20 +205,41 @@ export function Terminal() {
             content: (
               <div className="space-y-1">
                 <div>Available commands:</div>
+                <div className="pl-4 text-neon-cyan">log             - Open Trace Logger</div>
                 <div className="pl-4 text-neon-cyan">engrave &lt;message&gt; - Record a memory shard</div>
                 <div className="pl-4 text-neon-cyan">clear             - Clear terminal history</div>
                 <div className="pl-4 text-neon-cyan">status            - Check construct status</div>
                 <div className="pl-4 text-neon-cyan">whoami            - Show current subject info</div>
+                <div className="pl-4 text-neon-cyan">reroll            - Regenerate avatar (legacy)</div>
                 <div className="pl-4 text-neon-cyan">help              - Show this message</div>
               </div>
             )
           };
           break;
         
+        case 'log':
+        case 'diary':
+           if (!account) {
+             response = { id: Math.random().toString(), type: 'error', content: 'Access Denied. Connect wallet to log trace.' };
+           } else {
+             setMode('JOURNAL');
+             return; // Don't add response to history yet
+           }
+           break;
+
         case 'clear':
           setHistory([]);
           return;
         
+        case 'reroll':
+           if (!account) {
+             response = { id: Math.random().toString(), type: 'error', content: 'Connect wallet first.' };
+           } else {
+             response = { id: Math.random().toString(), type: 'system', content: 'Initiating avatar reconfiguration...' };
+             // Legacy command support, better use HUD
+           }
+           break;
+
         case 'whoami':
            if (!account || !currentUser) {
              response = { id: Math.random().toString(), type: 'error', content: 'You are an unidentified signal. Please connect.' };
@@ -217,12 +254,25 @@ export function Terminal() {
           } else if (args.length < 2) {
              response = { id: Math.random().toString(), type: 'error', content: 'Usage: engrave <your memory here>' };
           } else {
-             // TODO: Call Contract here
+             const memoryContent = args.slice(1).join(' ');
+             addLog({
+                content: memoryContent,
+                category: 'CLI_UPLOAD',
+                type: 'INFO'
+             });
+             
              response = { 
                id: Math.random().toString(), 
                type: 'success', 
-               content: `[MOCK] Memory Shard engraved successfully. Hash: 0x${Math.random().toString(16).slice(2,10)}` 
+               content: `[SYNC] Memory Shard engraved to Hive Mind.` 
              };
+             
+             triggerAlert({
+                type: 'success',
+                title: 'MEMORY ENGRAVED',
+                message: 'Shard successfully uploaded to Hive Mind via Neural Link.',
+                duration: 3000
+             });
           }
           break;
 
@@ -257,58 +307,113 @@ export function Terminal() {
       )}
 
       <main className={cn(
-        "lg:col-span-6 flex flex-col h-full min-h-0 transition-all duration-500",
+        "lg:col-span-6 flex flex-col h-full min-h-0 transition-all duration-500 perspective-1000",
         isRegistering ? "z-50 scale-105" : "z-auto"
       )}>
         <Card className={cn(
-          "flex-1 flex flex-col h-full overflow-hidden transition-all duration-500",
+          "flex-1 flex flex-col h-full overflow-hidden transition-all duration-500 relative",
           isRegistering ? "border-neon-cyan shadow-[0_0_30px_rgba(0,243,255,0.2)]" : ""
         )}>
-           <div className="flex-1 overflow-y-auto mb-4 p-2 font-mono text-sm scrollbar-thin space-y-2">
-              {history.map((line) => (
-                <div key={line.id} className={`${
-                  line.type === 'user' ? 'text-white' : 
-                  line.type === 'error' ? 'text-glitch-red' :
-                  line.type === 'success' ? 'text-matrix-green' :
-                  'text-titanium-grey'
-                }`}>
-                  {line.type === 'user' && <span className="text-neon-cyan mr-2">&gt;</span>}
-                  {line.content}
-                </div>
-              ))}
-              <div ref={bottomRef} />
-           </div>
-           
-           <div className={cn(
-             "border-t pt-4 mt-auto bg-void-black/50 backdrop-blur-sm transition-colors duration-300",
-             isRegistering ? "border-neon-cyan/50" : "border-titanium-grey"
-           )}>
-              <Input 
-                ref={inputRef}
-                value={command} 
-                onChange={(e) => setCommand(e.target.value)} 
-                placeholder={
-                  !account ? "Connect wallet to start..." : 
-                  isRegistering ? (bootSequence >= 5 ? "Enter codename..." : "Initializing...") : "Enter command..."
-                }
-                disabled={(!account && command !== 'help' && command !== 'clear') || (isRegistering && bootSequence < 5)} 
-                prefixText={
-                   !account ? "guest@engram:~$" :
-                   isRegistering ? "identity@protocol:~$" :
-                   `${currentUser?.codename || 'user'}@engram:~$`
-                }
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleCommand(command);
-                  }
-                }}
-                autoFocus
-                className={isRegistering ? "h-12 text-lg" : ""}
-              />
-              <div className="text-[10px] text-titanium-grey mt-2 flex justify-between px-1">
-                 <span>STATUS: {account ? (isRegistering ? 'IDENTIFYING...' : 'LINKED') : 'UNLINKED'}</span>
-                 <span>Type 'help' for commands</span>
+           {/* Action Bar (Top) */}
+           <div className="flex items-center justify-between p-2 border-b border-titanium-grey/20 bg-white/5 shrink-0">
+              <div className="flex items-center gap-2">
+                 <TerminalIcon size={14} className="text-neon-cyan" />
+                 <span className="text-xs text-titanium-grey font-mono">
+                   {mode === 'CLI' ? 'TERMINAL_V1.0' : 'TRACE_LOGGER_V1.0'}
+                 </span>
               </div>
+              <div className="flex gap-2">
+                 <button 
+                   onClick={() => account && setMode('JOURNAL')}
+                   className={`text-[10px] flex items-center gap-1 px-2 py-1 rounded border border-titanium-grey/30 hover:border-neon-cyan hover:text-neon-cyan transition-colors ${mode === 'JOURNAL' ? 'bg-neon-cyan/20 border-neon-cyan text-neon-cyan' : 'text-titanium-grey'}`}
+                   title="New Log Entry"
+                 >
+                   <PlusSquare size={10} /> NEW_LOG
+                 </button>
+                 <button className="text-[10px] flex items-center gap-1 px-2 py-1 rounded border border-titanium-grey/30 hover:border-neon-cyan hover:text-neon-cyan transition-colors text-titanium-grey">
+                   <Activity size={10} /> STATUS
+                 </button>
+                 <button 
+                   onClick={() => setHistory([])}
+                   className="text-[10px] flex items-center gap-1 px-2 py-1 rounded border border-titanium-grey/30 hover:border-neon-cyan hover:text-neon-cyan transition-colors text-titanium-grey"
+                 >
+                   <Trash2 size={10} /> CLEAR
+                 </button>
+              </div>
+           </div>
+
+           {/* Content Area with Flip Animation */}
+           <div className="flex-1 relative overflow-hidden">
+             <AnimatePresence mode="wait">
+               {mode === 'CLI' ? (
+                 <motion.div 
+                   key="cli"
+                   initial={{ opacity: 0, rotateY: -90 }}
+                   animate={{ opacity: 1, rotateY: 0 }}
+                   exit={{ opacity: 0, rotateY: 90 }}
+                   transition={{ duration: 0.4 }}
+                   className="absolute inset-0 flex flex-col"
+                 >
+                   <div className="flex-1 overflow-y-auto p-2 font-mono text-sm scrollbar-thin space-y-2">
+                      {history.map((line) => (
+                        <div key={line.id} className={`${
+                          line.type === 'user' ? 'text-white' : 
+                          line.type === 'error' ? 'text-glitch-red' :
+                          line.type === 'success' ? 'text-matrix-green' :
+                          'text-neon-cyan/70'
+                        }`}>
+                          {line.type === 'user' && <span className="text-neon-cyan mr-2">&gt;</span>}
+                          {line.content}
+                        </div>
+                      ))}
+                      <div ref={bottomRef} />
+                   </div>
+                   
+                   <div className={cn(
+                     "border-t pt-4 mt-auto bg-void-black/50 backdrop-blur-sm transition-colors duration-300 p-2",
+                     isRegistering ? "border-neon-cyan/50" : "border-titanium-grey"
+                   )}>
+                      <Input 
+                        ref={inputRef}
+                        value={command} 
+                        onChange={(e) => setCommand(e.target.value)} 
+                        placeholder={
+                          !account ? "Connect wallet to start..." : 
+                          isRegistering ? (bootSequence >= 5 ? "Enter codename..." : "Initializing...") : "Enter command..."
+                        }
+                        disabled={(!account && command !== 'help' && command !== 'clear') || (isRegistering && bootSequence < 5)} 
+                        prefixText={
+                           !account ? "guest@engram:~$" :
+                           isRegistering ? "identity@protocol:~$" :
+                           `${currentUser?.codename || 'user'}@engram:~$`
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleCommand(command);
+                          }
+                        }}
+                        autoFocus
+                        className={isRegistering ? "h-12 text-lg" : ""}
+                      />
+                      <div className="text-[10px] text-titanium-grey mt-2 flex justify-between px-1">
+                         <span>STATUS: {account ? (isRegistering ? 'IDENTIFYING...' : 'LINKED') : 'UNLINKED'}</span>
+                         <span>Type 'help' for commands</span>
+                      </div>
+                   </div>
+                 </motion.div>
+               ) : (
+                 <motion.div 
+                   key="journal"
+                   initial={{ opacity: 0, rotateY: 90 }}
+                   animate={{ opacity: 1, rotateY: 0 }}
+                   exit={{ opacity: 0, rotateY: -90 }}
+                   transition={{ duration: 0.4 }}
+                   className="absolute inset-0 bg-void-black"
+                 >
+                   <JournalEditor onExit={() => setMode('CLI')} />
+                 </motion.div>
+               )}
+             </AnimatePresence>
            </div>
         </Card>
       </main>
