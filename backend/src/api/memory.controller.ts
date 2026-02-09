@@ -16,18 +16,14 @@ export class MemoryController {
   @ApiOperation({ summary: 'Search memories' })
   @ApiQuery({ name: 'q', required: true })
   async search(@Query('q') query: string) {
-    // Simple ILike search for now. 
-    // For production, use Postgres tsvector:
-    // .where("to_tsvector('english', content) @@ plainto_tsquery(:query)", { query })
-    return this.shardRepo.find({
-      where: {
-        content: ILike(`%${query}%`),
-        is_encrypted: false, // Don't search encrypted content
-      },
-      take: 20,
-      order: { timestamp: 'DESC' },
-      relations: ['construct'],
-    });
+    // Optimized search using Postgres full-text search (to_tsvector)
+    return this.shardRepo.createQueryBuilder('shard')
+      .leftJoinAndSelect('shard.construct', 'construct')
+      .where("to_tsvector('english', shard.content) @@ plainto_tsquery('english', :query)", { query })
+      .andWhere('shard.is_encrypted = :encrypted', { encrypted: false })
+      .orderBy('shard.timestamp', 'DESC')
+      .take(20)
+      .getMany();
   }
 
   @Get(':construct_id')

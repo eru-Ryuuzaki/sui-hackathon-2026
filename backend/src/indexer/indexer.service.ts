@@ -3,7 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
-import type { SuiJsonRpcClient as SuiClient } from '@mysten/sui/jsonRpc';
+import { SuiClient, getFullnodeUrl } from '@mysten/sui.js/client';
 import { Construct } from '../entities/construct.entity';
 import { MemoryShard } from '../entities/memory-shard.entity';
 import { EventCursor } from '../entities/event-cursor.entity';
@@ -25,17 +25,14 @@ export class IndexerService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    const { SuiJsonRpcClient, getJsonRpcFullnodeUrl } = await import('@mysten/sui/jsonRpc');
-
     const network = this.configService.get<string>('SUI_NETWORK', 'testnet');
-    // Use JSON-RPC URL
     let nodeUrl = this.configService.get<string>('SUI_NODE_URL');
+    
     if (!nodeUrl) {
-        nodeUrl = getJsonRpcFullnodeUrl(network as any);
+        nodeUrl = getFullnodeUrl(network as 'mainnet' | 'testnet' | 'devnet' | 'localnet');
     }
     
-    // @ts-ignore
-    this.suiClient = new SuiJsonRpcClient({ url: nodeUrl });
+    this.suiClient = new SuiClient({ url: nodeUrl });
     this.packageId = this.configService.get<string>('SUI_PACKAGE_ID', '');
   }
 

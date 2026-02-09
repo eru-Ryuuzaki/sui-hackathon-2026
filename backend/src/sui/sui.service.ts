@@ -1,7 +1,9 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { SuiJsonRpcClient as SuiClient } from '@mysten/sui/jsonRpc';
-import type { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import { SuiClient, getFullnodeUrl } from '@mysten/sui.js/client';
+import { Ed25519Keypair } from '@mysten/sui.js/keypairs/ed25519';
+import { TransactionBlock } from '@mysten/sui.js/transactions';
+import { fromB64 } from '@mysten/sui.js/utils';
 
 @Injectable()
 export class SuiService implements OnModuleInit {
@@ -12,24 +14,19 @@ export class SuiService implements OnModuleInit {
   constructor(private configService: ConfigService) {}
 
   async onModuleInit() {
-    const { SuiJsonRpcClient, getJsonRpcFullnodeUrl } = await import('@mysten/sui/jsonRpc');
-    const { Transaction } = await import('@mysten/sui/transactions');
-    // Note: If Ed25519Keypair is needed, import it dynamically too.
-    // const { Ed25519Keypair } = await import('@mysten/sui/keypairs/ed25519');
-
     const network = this.configService.get<string>('SUI_NETWORK', 'testnet');
     let nodeUrl = this.configService.get<string>('SUI_NODE_URL');
+    
     if (!nodeUrl) {
-        nodeUrl = getJsonRpcFullnodeUrl(network as any);
+        nodeUrl = getFullnodeUrl(network as 'mainnet' | 'testnet' | 'devnet' | 'localnet');
     }
     
-    // @ts-ignore
-    this.client = new SuiJsonRpcClient({ url: nodeUrl });
+    this.client = new SuiClient({ url: nodeUrl });
 
     const privateKey = this.configService.get<string>('SUI_FAUCET_PRIVATE_KEY');
     if (privateKey) {
       try {
-         // Placeholder for key loading
+        this.signer = Ed25519Keypair.fromSecretKey(fromB64(privateKey));
       } catch (e) {
         this.logger.error('Failed to load faucet key', e);
       }
@@ -45,16 +42,13 @@ export class SuiService implements OnModuleInit {
       throw new Error('Faucet signer not configured');
     }
 
-    // Dynamic import for Transaction class
-    const { Transaction } = await import('@mysten/sui/transactions');
+    const tx = new TransactionBlock();
+    const [coin] = tx.splitCoins(tx.gas, [tx.pure(amount)]);
+    tx.transferObjects([coin], tx.pure(to));
 
-    const tx = new Transaction();
-    const [coin] = tx.splitCoins(tx.gas, [amount]);
-    tx.transferObjects([coin], to);
-
-    const res = await this.client.signAndExecuteTransaction({
+    const res = await this.client.signAndExecuteTransactionBlock({
       signer: this.signer,
-      transaction: tx,
+      transactionBlock: tx,
     });
 
     return res.digest;

@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiProperty } from '@nestjs/swagger';
-import type { Transaction } from '@mysten/sui/transactions';
+import { TransactionBlock } from '@mysten/sui.js/transactions';
 import { SuiService } from '../sui/sui.service';
 
 class EngraveDto {
@@ -30,8 +30,7 @@ export class TransactionController {
   @Post('engrave')
   @ApiOperation({ summary: 'Build engrave transaction' })
   async buildEngraveTx(@Body() dto: EngraveDto) {
-    const { Transaction } = await import('@mysten/sui/transactions');
-    const tx = new Transaction();
+    const tx = new TransactionBlock();
     tx.setSender(dto.sender);
 
     const packageId = this.suiService.getPackageId();
@@ -50,11 +49,11 @@ export class TransactionController {
         tx.object(dto.construct_id),
         tx.object(hiveId),
         tx.object('0x6'), // Clock
-        tx.pure.string(dto.content),
-        tx.pure.u8(dto.emotion_val),
-        tx.pure.u8(dto.category),
-        tx.pure.bool(dto.is_encrypted),
-        tx.pure.option('string', dto.blob_id),
+        tx.pure(dto.content),
+        tx.pure(dto.emotion_val),
+        tx.pure(dto.category),
+        tx.pure(dto.is_encrypted),
+        tx.pure(dto.blob_id ? [dto.blob_id] : []),
       ],
     });
 

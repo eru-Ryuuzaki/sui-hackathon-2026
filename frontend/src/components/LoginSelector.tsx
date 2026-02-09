@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useConnectWallet } from '@mysten/dapp-kit';
+import { useConnectWallet, useWallets } from '@mysten/dapp-kit';
 import { GlitchModal } from '@/components/ui/GlitchModal';
-import { Wallet, Globe, ScanFace, Lock } from 'lucide-react';
+import { Wallet, Globe, ScanFace, Lock, ChevronLeft, Download } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { triggerAlert } from '@/components/ui/SystemAlert';
 
@@ -17,39 +17,32 @@ interface LoginSelectorProps {
 
 export function LoginSelector({ isOpen, onClose }: LoginSelectorProps) {
   const { mutate: connectWallet } = useConnectWallet();
+  const wallets = useWallets();
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [view, setView] = useState<'main' | 'wallet-list'>('main');
 
-  const handleWalletLogin = () => {
-    // Open the default Sui Wallet selector
-    // Note: The dApp Kit connectWallet hook expects a specific wallet object.
-    // If we call it with {}, it fails inside the hook when trying to access 'wallet.features'.
-    // We should NOT call connectWallet manually if we want to use the default modal.
-    // Instead, we should use the ConnectButton or trigger the modal open state.
-    
-    // However, since we are building a custom UI, we might be using the wrong hook.
-    // useConnectWallet is for connecting to a KNOWN wallet instance.
-    // If we want to open the modal, we need to use the context or store that controls the modal visibility.
-    
-    // Checking @mysten/dapp-kit docs/source:
-    // The ConnectModal is usually controlled by the ConnectButton. 
-    // There isn't a direct "useConnectModal" hook exposed publicly in early versions, 
-    // but we can try to simulate a click on a hidden ConnectButton or check if there is another way.
-    
-    // WORKAROUND:
-    // Since we can't easily access the internal modal state, we will trigger a click on a hidden ConnectButton.
-    // This is a hack but ensures we use the standard flow.
-    const hiddenBtn = document.getElementById('engram-hidden-connect-btn');
-    if (hiddenBtn) {
-        onClose();
-        setTimeout(() => hiddenBtn.click(), 100);
-    } else {
-        console.error("Hidden connect button not found");
-        triggerAlert({
+  const handleWalletSelect = (wallet: any) => {
+    connectWallet(
+      { wallet },
+      {
+        onSuccess: () => {
+          onClose();
+          triggerAlert({
+             type: 'success',
+             title: 'NEURAL LINK ESTABLISHED',
+             message: `Connected to ${wallet.name}`,
+          });
+        },
+        onError: (error) => {
+          console.error("Connection failed:", error);
+          triggerAlert({
             type: 'error',
-            title: 'CONNECTION ERROR',
-            message: 'Could not initiate wallet connection protocol.'
-        });
-    }
+            title: 'CONNECTION FAILURE',
+            message: 'Neural link rejected by host.',
+          });
+        }
+      }
+    );
   };
 
   const handleZkLogin = () => {
@@ -87,6 +80,58 @@ export function LoginSelector({ isOpen, onClose }: LoginSelectorProps) {
     }, 1500);
   };
 
+  const renderWalletList = () => (
+    <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+      <div className="flex items-center gap-2 mb-4">
+        <button 
+          onClick={() => setView('main')}
+          className="p-2 hover:bg-white/10 rounded-full transition-colors text-titanium-grey hover:text-white"
+        >
+          <ChevronLeft size={20} />
+        </button>
+        <h3 className="text-lg font-heading text-neon-cyan tracking-widest">
+          SELECT INTERFACE
+        </h3>
+      </div>
+
+      <div className="grid gap-3 max-h-[300px] overflow-y-auto custom-scrollbar">
+        {wallets.length === 0 ? (
+          <div className="p-6 border border-dashed border-titanium-grey/30 rounded flex flex-col items-center text-center gap-3">
+             <Download size={32} className="text-titanium-grey" />
+             <p className="text-titanium-grey font-mono text-sm">
+               No compatible neural interfaces (wallets) detected.
+             </p>
+             <a 
+               href="https://chrome.google.com/webstore/detail/sui-wallet/opcgpfmipidbgpenhmajoajpbnyfyjmg" 
+               target="_blank" 
+               rel="noreferrer"
+               className="text-neon-cyan hover:underline text-xs"
+             >
+               [INSTALL SUI WALLET]
+             </a>
+          </div>
+        ) : (
+          wallets.map((wallet) => (
+            <button
+              key={wallet.name}
+              onClick={() => handleWalletSelect(wallet)}
+              className="flex items-center gap-4 p-4 border border-titanium-grey/20 bg-white/5 hover:bg-neon-cyan/10 hover:border-neon-cyan/50 transition-all group"
+            >
+              <img 
+                src={wallet.icon} 
+                alt={wallet.name} 
+                className="w-8 h-8 rounded-sm grayscale group-hover:grayscale-0 transition-all"
+              />
+              <span className="font-mono text-sm text-titanium-grey group-hover:text-white">
+                {wallet.name}
+              </span>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <GlitchModal 
       isOpen={isOpen} 
@@ -94,10 +139,11 @@ export function LoginSelector({ isOpen, onClose }: LoginSelectorProps) {
       title="ACCESS PROTOCOL"
       className="max-w-2xl"
     >
+      {view === 'wallet-list' ? renderWalletList() : (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Option 1: Neural Link (Wallet) */}
         <button
-          onClick={handleWalletLogin}
+          onClick={() => setView('wallet-list')}
           className="group relative h-64 border border-titanium-grey/30 bg-white/5 hover:bg-neon-cyan/10 transition-all duration-300 flex flex-col items-center justify-center gap-4 overflow-hidden"
         >
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-neon-cyan/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -153,6 +199,7 @@ export function LoginSelector({ isOpen, onClose }: LoginSelectorProps) {
           </div>
         </button>
       </div>
+      )}
 
       <div className="mt-6 p-3 border border-glitch-red/20 bg-glitch-red/5 rounded flex items-start gap-3">
          <Lock size={16} className="text-glitch-red mt-0.5 shrink-0" />
