@@ -2,10 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
   format, 
   startOfMonth, 
-  endOfMonth, 
   startOfWeek, 
-  endOfWeek, 
-  eachDayOfInterval, 
   isSameMonth, 
   isSameDay, 
   addMonths, 
@@ -43,7 +40,7 @@ function extractIcon(log: CalendarLog): string {
   return log.content.charAt(0).toUpperCase();
 }
 
-export function HiveMindCalendar({ logs, isOpen, onClose, onDateClick }: HiveMindCalendarProps) {
+export function HiveMindCalendar({ logs, isOpen, onDateClick }: HiveMindCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [globalTick, setGlobalTick] = useState(0);
 

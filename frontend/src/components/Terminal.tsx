@@ -11,7 +11,7 @@ import { MatrixRain } from '@/components/ui/MatrixRain';
 import { CyberAvatar } from '@/components/ui/CyberAvatar';
 import { JournalEditor } from '@/components/ui/JournalEditor';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Terminal as TerminalIcon, PlusSquare, Trash2, Activity, HelpCircle } from 'lucide-react';
+import { Terminal as TerminalIcon, PlusSquare, Trash2, Activity, XCircle } from 'lucide-react';
 
 interface TerminalLine {
   id: string;
@@ -35,7 +35,6 @@ export function Terminal() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [bootSequence, setBootSequence] = useState(0);
   const [showMatrix, setShowMatrix] = useState(false);
-  const [avatarSeed, setAvatarSeed] = useState('');
 
   // Mode State (CLI vs Journal)
   const [mode, setMode] = useState<'CLI' | 'JOURNAL'>('CLI');
@@ -81,7 +80,7 @@ export function Terminal() {
             { text: '> PLEASE ENTER YOUR CODENAME:', delay: 3500 }
           ];
 
-          setHistory(prev => []); // Clear history for focus
+          setHistory([]); // Clear history for focus
 
           sequence.forEach(({ text, delay }) => {
             setTimeout(() => {
@@ -131,7 +130,6 @@ export function Terminal() {
 
        // Start Avatar Generation Sequence
        const seed = account.address;
-       setAvatarSeed(seed);
        setHistory(prev => [...prev, { id: Math.random().toString(), type: 'success', content: `> CODENAME "${codename.toUpperCase()}" ACCEPTED.` }]);
        
        setTimeout(() => {
@@ -296,6 +294,42 @@ export function Terminal() {
     }, 300); 
   };
 
+  const handleClear = () => {
+     setHistory([
+       { id: Math.random().toString(), type: 'system', content: '> TERMINAL BUFFER CLEARED.' }
+     ]);
+     triggerAlert({
+       type: 'info',
+       title: 'BUFFER CLEARED',
+       message: 'Local terminal history has been wiped.',
+       duration: 2000
+     });
+  };
+
+  const handleStatus = () => {
+     if (!account) {
+        triggerAlert({ type: 'error', title: 'OFFLINE', message: 'Neural Link Disconnected.' });
+        return;
+     }
+     
+     const statusLine = { 
+       id: Math.random().toString(), 
+       type: 'system', 
+       content: (
+         <div className="p-2 border border-neon-cyan/30 bg-neon-cyan/5 rounded text-xs font-mono space-y-1">
+            <div className="font-bold text-neon-cyan mb-2">=== SYSTEM STATUS REPORT ===</div>
+            <div>STATUS: <span className="text-matrix-green">ONLINE</span></div>
+            <div>USER: {currentUser?.codename || 'UNKNOWN'}</div>
+            <div>ADDR: {account.address}</div>
+            <div>MEMORY SHARDS: {useMemoryStore.getState().logs.length}</div>
+            <div>SYNC_RATE: 100%</div>
+         </div>
+       ) 
+     } as TerminalLine;
+
+     setHistory(prev => [...prev, statusLine]);
+  };
+
   return (
     <>
       {/* Matrix Rain Background */}
@@ -323,22 +357,36 @@ export function Terminal() {
                  </span>
               </div>
               <div className="flex gap-2">
-                 <button 
-                   onClick={() => account && setMode('JOURNAL')}
-                   className={`text-[10px] flex items-center gap-1 px-2 py-1 rounded border border-titanium-grey/30 hover:border-neon-cyan hover:text-neon-cyan transition-colors ${mode === 'JOURNAL' ? 'bg-neon-cyan/20 border-neon-cyan text-neon-cyan' : 'text-titanium-grey'}`}
-                   title="New Log Entry"
-                 >
-                   <PlusSquare size={10} /> NEW_LOG
-                 </button>
-                 <button className="text-[10px] flex items-center gap-1 px-2 py-1 rounded border border-titanium-grey/30 hover:border-neon-cyan hover:text-neon-cyan transition-colors text-titanium-grey">
-                   <Activity size={10} /> STATUS
-                 </button>
-                 <button 
-                   onClick={() => setHistory([])}
-                   className="text-[10px] flex items-center gap-1 px-2 py-1 rounded border border-titanium-grey/30 hover:border-neon-cyan hover:text-neon-cyan transition-colors text-titanium-grey"
-                 >
-                   <Trash2 size={10} /> CLEAR
-                 </button>
+                 {mode === 'JOURNAL' ? (
+                   <button 
+                     onClick={() => setMode('CLI')}
+                     className="text-[10px] flex items-center gap-1 px-2 py-1 rounded border border-glitch-red/50 text-glitch-red hover:bg-glitch-red/10 transition-colors"
+                   >
+                     <XCircle size={10} /> CANCEL
+                   </button>
+                 ) : (
+                   <>
+                     <button 
+                       onClick={() => account ? setMode('JOURNAL') : triggerAlert({ type: 'warning', title: 'ACCESS DENIED', message: 'Connect wallet to log trace.' })}
+                       className="text-[10px] flex items-center gap-1 px-2 py-1 rounded border border-titanium-grey/30 hover:border-neon-cyan hover:text-neon-cyan transition-colors text-titanium-grey"
+                       title="New Log Entry"
+                     >
+                       <PlusSquare size={10} /> NEW_LOG
+                     </button>
+                     <button 
+                       onClick={handleStatus}
+                       className="text-[10px] flex items-center gap-1 px-2 py-1 rounded border border-titanium-grey/30 hover:border-neon-cyan hover:text-neon-cyan transition-colors text-titanium-grey"
+                     >
+                       <Activity size={10} /> STATUS
+                     </button>
+                     <button 
+                       onClick={handleClear}
+                       className="text-[10px] flex items-center gap-1 px-2 py-1 rounded border border-titanium-grey/30 hover:border-neon-cyan hover:text-neon-cyan transition-colors text-titanium-grey"
+                     >
+                       <Trash2 size={10} /> CLEAR
+                     </button>
+                   </>
+                 )}
               </div>
            </div>
 

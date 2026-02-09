@@ -1,12 +1,10 @@
-import { useState } from 'react';
+import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { Card } from '@/components/ui/Card';
 import { HiveMindCalendar } from '@/components/ui/HiveMindCalendar';
 import { format } from 'date-fns';
-import { useMemoryStore } from '@/hooks/useMemoryStore';
 
 export function HiveMind() {
   const { logs } = useMemoryStore();
-  const [isCalendarOpen, setIsCalendarOpen] = useState(true);
 
   // Convert logs for Calendar
   const calendarLogs = logs.map(log => ({

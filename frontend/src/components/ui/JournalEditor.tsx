@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useUserStore } from '@/hooks/useUserStore';
 import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { useCurrentAccount } from '@mysten/dapp-kit';
-import { cn } from '@/utils/cn';
 import { format, differenceInSeconds } from 'date-fns';
 import { triggerAlert } from '@/components/ui/SystemAlert';
 import { 
@@ -11,7 +10,6 @@ import {
   FileText, 
   Save, 
   XCircle, 
-  Calendar as CalendarIcon,
   Cloud,
   Smile,
   Zap

@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useConnectWallet, useWallets } from '@mysten/dapp-kit';
 import { GlitchModal } from '@/components/ui/GlitchModal';
-import { Wallet, Globe, ScanFace, Lock, ChevronLeft, Download } from 'lucide-react';
-import { cn } from '@/utils/cn';
+import { Wallet, ScanFace, Lock, ChevronLeft, Download } from 'lucide-react';
 import { triggerAlert } from '@/components/ui/SystemAlert';
 
 // --- Configuration ---

@@ -31,9 +31,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <WalletProvider 
           autoConnect={true} 
           storageKey="engram_wallet_state"
-          stashedWallet={{
-            name: 'ENGRAM Stashed Wallet'
-          }}
         >
           <App />
         </WalletProvider>
