@@ -4,9 +4,7 @@ import { GlitchModal } from '@/components/ui/GlitchModal';
 import { Wallet, ScanFace, Lock, ChevronLeft, Download } from 'lucide-react';
 import { triggerAlert } from '@/components/ui/SystemAlert';
 
-// --- Configuration ---
-// TODO: Replace with actual Google Client ID from Cloud Console
-const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 const REDIRECT_URI = window.location.origin + '/auth/callback';
 
 interface LoginSelectorProps {
@@ -45,38 +43,26 @@ export function LoginSelector({ isOpen, onClose }: LoginSelectorProps) {
   };
 
   const handleZkLogin = () => {
+    if (!GOOGLE_CLIENT_ID) {
+      triggerAlert({
+        type: 'warning',
+        title: 'CONFIG REQUIRED',
+        message: 'Missing VITE_GOOGLE_CLIENT_ID. Set it in .env and retry.',
+        duration: 6000,
+      });
+      return;
+    }
     setIsRedirecting(true);
-    
-    // 1. Generate Nonce (Mocking the randomness for now)
-    // In production: import { generateNonce } from '@mysten/sui/zklogin';
-    // const nonce = generateNonce(userPublicKey, maxEpoch, randomness);
-    const mockNonce = 'mock_nonce_' + Math.random().toString(36).substring(7);
-
-    // 2. Construct OAuth URL
     const params = new URLSearchParams({
       client_id: GOOGLE_CLIENT_ID,
       response_type: 'id_token',
       redirect_uri: REDIRECT_URI,
       scope: 'openid email profile',
-      nonce: mockNonce,
-      state: 'engram_login_state' 
+      state: 'engram_login_state',
+      prompt: 'select_account',
     });
-
     const loginUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-
-    // 3. Redirect (Simulated delay for effect)
-    setTimeout(() => {
-        // window.location.href = loginUrl; 
-        // Since we don't have a real Client ID, we alert instead of breaking the flow
-        triggerAlert({
-          type: 'warning',
-          title: 'PROTOCOL PENDING',
-          message: `Redirecting to Google OAuth... (Feature Pending: Requires valid GOOGLE_CLIENT_ID)\nURL: ${loginUrl}`,
-          duration: 8000
-        });
-        setIsRedirecting(false);
-        onClose(); 
-    }, 1500);
+    window.location.href = loginUrl;
   };
 
   const renderWalletList = () => (
