@@ -3,24 +3,27 @@ import { useCurrentAccount, useDisconnectWallet, ConnectButton } from '@mysten/d
 import { useUserStore } from '@/hooks/useUserStore';
 import { CyberAvatar } from '@/components/ui/CyberAvatar';
 import { LoginSelector } from '@/components/LoginSelector';
+import { SettingsModal } from '@/components/SettingsModal';
 import { useState } from 'react';
-import { Power, Radio } from 'lucide-react';
+import { Power, Radio, Settings } from 'lucide-react';
 import { triggerAlert } from '@/components/ui/SystemAlert';
 
 export function HUD() {
   const account = useCurrentAccount();
   const { mutate: disconnect } = useDisconnectWallet();
-  const { currentUser, updateAvatar, logout } = useUserStore(); // Added logout
+  const { currentUser, updateAvatar, logout } = useUserStore(); 
   const [isHoveringAvatar, setIsHoveringAvatar] = useState(false);
   const [isRerolling, setIsRerolling] = useState(false);
-  const [hasRerolledInHover, setHasRerolledInHover] = useState(false); // Track if rerolled during current hover
+  const [hasRerolledInHover, setHasRerolledInHover] = useState(false); 
   const [isLoginOpen, setIsLoginOpen] = useState(false);
-  
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false); 
+
+  // ... rest of logic ...
   // Determine effective connection state (Wallet OR zkLogin)
   const isConnected = !!account || !!currentUser;
   const currentAddress = account?.address || currentUser?.address;
   const connectionType = account ? 'WALLET' : 'ZKLOGIN';
-
+  
   // Mock Stats
   const stats = {
     level: isConnected ? 1 : 0,
@@ -63,6 +66,7 @@ export function HUD() {
   return (
     <aside className="lg:col-span-3 space-y-6 flex flex-col h-full min-h-0">
       <LoginSelector isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       
       <Card className="shrink-0">
         <h1 className="text-3xl font-bold mb-2 font-heading tracking-widest text-white drop-shadow-[0_0_5px_rgba(0,243,255,0.8)]">ENGRAM</h1>
@@ -117,7 +121,16 @@ export function HUD() {
           {isConnected && currentUser && (
             <>
               <div>
-                <div className="text-xs text-titanium-grey mb-1">IDENTITY</div>
+                <div className="text-xs text-titanium-grey mb-1 flex items-center justify-between">
+                  <span>IDENTITY</span>
+                  <button 
+                    onClick={() => setIsSettingsOpen(true)}
+                    className="text-titanium-grey hover:text-neon-cyan transition-colors"
+                    title="Construct Configuration"
+                  >
+                    <Settings size={12} />
+                  </button>
+                </div>
                 <div className="flex items-center gap-2">
                    <div 
                      className="relative cursor-pointer group"

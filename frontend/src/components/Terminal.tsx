@@ -12,6 +12,7 @@ import { CyberAvatar } from '@/components/ui/CyberAvatar';
 import { JournalEditor } from '@/components/ui/JournalEditor';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Terminal as TerminalIcon, PlusSquare, Trash2, Activity, XCircle } from 'lucide-react';
+import { IdentityRegistrationModal } from '@/components/IdentityRegistrationModal';
 
 interface TerminalLine {
   id: string;
@@ -21,7 +22,7 @@ interface TerminalLine {
 
 export function Terminal() {
   const account = useCurrentAccount();
-  const { currentUser, login, register } = useUserStore();
+  const { currentUser, login, register, updateBirthday } = useUserStore();
   const { addLog } = useMemoryStore();
   const [command, setCommand] = useState('');
   
@@ -38,7 +39,6 @@ export function Terminal() {
   
   // Login Flow State
   const [isRegistering, setIsRegistering] = useState(false);
-  const [bootSequence, setBootSequence] = useState(0);
   const [showMatrix, setShowMatrix] = useState(false);
 
   // Mode State (CLI vs Journal)
@@ -73,36 +73,69 @@ export function Terminal() {
       } else {
         // New User -> Start Registration Flow
         if (!isRegistering) {
-          setIsRegistering(true);
-          // Play Boot Sequence
-          let step = 0;
-          const sequence = [
-            { text: '> INITIALIZING NEURAL LINK PROTOCOL...', delay: 800 },
-            { text: '> DETECTING UNREGISTERED CONSCIOUSNESS...', delay: 1600 },
-            { text: '> INITIATING IDENTITY VERIFICATION...', delay: 2400 },
-            { text: <br/>, delay: 2500 },
-            { text: '> PROTOCOL 101: IDENTIFY YOURSELF.', delay: 3000 },
-            { text: '> PLEASE ENTER YOUR CODENAME:', delay: 3500 }
-          ];
-
-          setHistory([]); // Clear history for focus
-
-          sequence.forEach(({ text, delay }) => {
-            setTimeout(() => {
-               setHistory(prev => [...prev, { id: Math.random().toString(), type: 'system', content: text }]);
-               step++;
-               setBootSequence(step);
-            }, delay);
-          });
+          setIsRegistering(true); // This now triggers the MODAL, not just the flag
+          setHistory(prev => [...prev, { id: Math.random().toString(), type: 'system', content: '> INITIATING IDENTITY PROTOCOL...' }]);
         }
       }
     } else {
       // Logout
       setIsRegistering(false);
-      setBootSequence(0);
       setShowMatrix(false);
     }
   }, [currentAddress]); // React to address changes (including zkLogin)
+
+  // --- Registration Callback ---
+  const handleIdentityConfirm = (codename: string, birthday: string) => {
+    // 1. Trigger Matrix Rain (Visual Metaphor for Upload)
+    setShowMatrix(true);
+    
+    // 2. Add System Logs (Scrolling effect)
+    const logs = [
+      `> CODENAME "${codename.toUpperCase()}" ACCEPTED.`,
+      `> ORIGIN DATE: ${birthday}`,
+      `> UPLOADING BIOMETRICS TO HIVE MIND...`,
+      `> SYNCING MEMORY SHARDS...`,
+      `> GENERATING DIGITAL AVATAR HASH...`
+    ];
+
+    let delay = 0;
+    logs.forEach(log => {
+      setTimeout(() => {
+        setHistory(prev => [...prev, { id: Math.random().toString(), type: 'system', content: log }]);
+      }, delay);
+      delay += 800;
+    });
+
+    // 3. Finalize Registration after logs
+    setTimeout(() => {
+      // Update Store
+      register(currentAddress!, codename);
+      updateBirthday(currentAddress!, birthday);
+
+      // Show Avatar in Terminal
+      setHistory(prev => [
+        ...prev, 
+        { 
+          id: Math.random().toString(), 
+          type: 'system', 
+          content: (
+            <div className="flex items-center gap-4 my-2 p-2 border border-neon-cyan bg-neon-cyan/10 rounded shadow-[0_0_15px_rgba(0,243,255,0.3)]">
+              <CyberAvatar seed={currentAddress!} size={64} glitch={false} className="border-neon-cyan" />
+              <div className="text-xs">
+                <div className="text-neon-cyan font-bold">AVATAR GENERATED</div>
+                <div className="text-titanium-grey font-mono text-[10px]">{currentAddress!.slice(0, 16)}...</div>
+              </div>
+            </div>
+          ) 
+        },
+        { id: Math.random().toString(), type: 'success', content: `> WELCOME TO THE VOID, ${codename.toUpperCase()}.` },
+        { id: Math.random().toString(), type: 'system', content: `> TYPE 'HELP' TO BEGIN.` }
+      ]);
+      
+      setIsRegistering(false);
+      setTimeout(() => setShowMatrix(false), 5000); // Fade out matrix rain
+    }, delay + 1000);
+  };
 
   const handleCommand = (cmd: string) => {
     if (!cmd.trim()) return;
@@ -117,81 +150,7 @@ export function Terminal() {
     setHistory(prev => [...prev, userLine]);
     setCommand('');
 
-    // INTERCEPT COMMAND FOR REGISTRATION
-    if (isRegistering && currentAddress) {
-       const codename = cmd.trim();
-       // Basic validation
-       if (codename.length < 2 || codename.length > 20) {
-          setTimeout(() => {
-            setHistory(prev => [...prev, { id: Math.random().toString(), type: 'error', content: '> ERROR: CODENAME MUST BE 2-20 CHARS.' }]);
-            triggerAlert({
-              type: 'error',
-              title: 'IDENTITY REJECTED',
-              message: 'Codename format invalid. Length requirements: 2-20 characters.'
-            });
-          }, 200);
-          return;
-       }
-
-       // Start Avatar Generation Sequence
-       const seed = currentAddress;
-       setHistory(prev => [...prev, { id: Math.random().toString(), type: 'success', content: `> CODENAME "${codename.toUpperCase()}" ACCEPTED.` }]);
-       
-       setTimeout(() => {
-          setHistory(prev => [...prev, { 
-            id: Math.random().toString(), 
-            type: 'system', 
-            content: (
-              <div className="flex items-center gap-4 my-2 p-2 border border-titanium-grey/30 bg-white/5 rounded">
-                <CyberAvatar seed={seed} size={48} glitch={true} />
-                <div className="text-xs">
-                  <div>GENERATING DIGITAL AVATAR...</div>
-                  <div className="text-titanium-grey animate-pulse">PROCESSING HASH: {currentAddress.slice(0,10)}...</div>
-                </div>
-              </div>
-            ) 
-          }]);
-       }, 500);
-
-       // Reveal Avatar & Complete
-       setTimeout(() => {
-          setShowMatrix(true); // Trigger Matrix Rain
-          register(currentAddress, codename);
-          
-          setHistory(prev => {
-            // Replace the loading avatar with revealed one
-            const newHistory = [...prev];
-            const lastIdx = newHistory.length - 1;
-            newHistory[lastIdx] = {
-              id: Math.random().toString(), 
-              type: 'system', 
-              content: (
-                <div className="flex items-center gap-4 my-2 p-2 border border-neon-cyan bg-neon-cyan/10 rounded shadow-[0_0_15px_rgba(0,243,255,0.3)]">
-                  <CyberAvatar seed={seed} size={64} glitch={false} className="border-neon-cyan" />
-                  <div className="text-xs">
-                    <div className="text-neon-cyan font-bold">AVATAR GENERATED</div>
-                    <div className="text-titanium-grey font-mono text-[10px]">{seed.slice(0, 16)}...</div>
-                  </div>
-                </div>
-              ) 
-            };
-            return newHistory;
-          });
-
-          setTimeout(() => {
-             setHistory(prev => [
-               ...prev,
-               { id: Math.random().toString(), type: 'success', content: `> WELCOME TO THE VOID, ${codename.toUpperCase()}.` },
-               { id: Math.random().toString(), type: 'system', content: `> TYPE 'HELP' TO BEGIN.` }
-             ]);
-             setIsRegistering(false);
-             // Matrix rain stays for a bit then fades out (controlled by CSS opacity or unmount)
-             setTimeout(() => setShowMatrix(false), 5000);
-          }, 800);
-
-       }, 2500);
-       return;
-    }
+    // NOTE: Old registration intercept logic removed since we use Modal now
 
     // Normal Command Processing
     const args = cmd.trim().split(' ');
@@ -340,18 +299,23 @@ export function Terminal() {
       {/* Matrix Rain Background */}
       {showMatrix && <MatrixRain />}
 
-      {/* Focus Mode Overlay */}
-      {isRegistering && (
-        <div className="fixed inset-0 bg-void-black/80 backdrop-blur-sm z-40 transition-all duration-1000" />
-      )}
+      {/* Identity Registration Modal */}
+      <IdentityRegistrationModal 
+        isOpen={isRegistering}
+        onConfirm={handleIdentityConfirm}
+        defaultCodename={
+          currentUser?.codename || // Prioritize existing
+          (account ? `${account.address.slice(0, 4)}...${account.address.slice(-4)}` : '') // New Logic: 0x12...3456
+        }
+      />
 
       <main className={cn(
         "lg:col-span-6 flex flex-col h-full min-h-0 transition-all duration-500 perspective-1000",
-        isRegistering ? "z-50 scale-105" : "z-auto"
+        isRegistering ? "z-40" : "z-auto" // Reduced Z since Modal is on top
       )}>
         <Card className={cn(
           "flex-1 flex flex-col h-full overflow-hidden transition-all duration-500 relative",
-          isRegistering ? "border-neon-cyan shadow-[0_0_30px_rgba(0,243,255,0.2)]" : ""
+          isRegistering ? "blur-sm scale-95 opacity-50" : "" // Blur background when modal open
         )}>
            {/* Action Bar (Top) */}
            <div className="flex items-center justify-between p-2 border-b border-titanium-grey/20 bg-white/5 shrink-0">
@@ -431,10 +395,9 @@ export function Terminal() {
                         value={command} 
                         onChange={(e) => setCommand(e.target.value)} 
                         placeholder={
-                          !isConnected ? "Connect wallet to start..." : 
-                          isRegistering ? (bootSequence >= 5 ? "Enter codename..." : "Initializing...") : "Enter command..."
+                          !isConnected ? "Connect wallet to start..." : "Enter command..."
                         }
-                        disabled={(!isConnected && command !== 'help' && command !== 'clear') || (isRegistering && bootSequence < 5)} 
+                        disabled={!isConnected || isRegistering} 
                         prefixText={
                            !isConnected ? "guest@engram:~$" :
                            isRegistering ? "identity@protocol:~$" :
@@ -446,7 +409,7 @@ export function Terminal() {
                           }
                         }}
                         autoFocus
-                        className={isRegistering ? "h-12 text-lg" : ""}
+                        className={isRegistering ? "opacity-50" : ""}
                       />
                       <div className="text-[10px] text-titanium-grey mt-2 flex justify-between px-1">
                          <span>STATUS: {isConnected ? (isRegistering ? 'IDENTIFYING...' : 'LINKED') : 'UNLINKED'}</span>
