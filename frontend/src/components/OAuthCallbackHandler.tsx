@@ -33,6 +33,7 @@ export function OAuthCallbackHandler() {
       const codename = decoded?.name || `NEURAL-${address.slice(-4)}`
       // If user exists, we respect their stored profile (especially if they customized their avatar)
       // If not, we register them with default codename from Google or truncated address
+      const store = useUserStore.getState();
       const existingUser = store.users[address];
       if (!existingUser) {
           // NEW USER: Register with basic info
