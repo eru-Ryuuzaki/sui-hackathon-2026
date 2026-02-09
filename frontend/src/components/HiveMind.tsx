@@ -2,6 +2,7 @@ import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { Card } from '@/components/ui/Card';
 import { HiveMindCalendar } from '@/components/ui/HiveMindCalendar';
 import { format } from 'date-fns';
+import { AttachmentViewer } from '@/components/ui/AttachmentViewer';
 
 export function HiveMind() {
   const { logs } = useMemoryStore();
@@ -84,6 +85,9 @@ export function HiveMind() {
                    <div className={textClass}>
                      {log.content}
                    </div>
+                   {log.metadata?.attachments && log.metadata.attachments.length > 0 && (
+                     <AttachmentViewer attachments={log.metadata.attachments} />
+                   )}
                    <div className="flex justify-between items-end mt-1">
                       <div className={hashClass}>{log.hash}</div>
                       {log.metadata?.mood && <div className="text-xs opacity-50">{log.metadata.mood}</div>}

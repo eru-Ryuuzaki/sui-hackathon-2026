@@ -1,6 +1,15 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+export interface LogAttachmentData {
+  blobId: string;
+  name: string;
+  type: string;
+  size: number;
+  isEncrypted: boolean;
+  encryptionIv?: string; // Base64 IV
+}
+
 export interface MemoryLog {
   id: string;
   timestamp: number; // Unix timestamp
@@ -13,6 +22,7 @@ export interface MemoryLog {
     mood?: string;
     lifeFrame?: number;
     icon?: string;
+    attachments?: LogAttachmentData[]; // Added attachments
   };
   hash: string; // Simulated tx hash
 }
