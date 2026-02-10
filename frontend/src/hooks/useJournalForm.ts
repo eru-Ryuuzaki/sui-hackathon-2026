@@ -22,53 +22,47 @@ export function useJournalForm() {
   
   const [showIconPicker, setShowIconPicker] = useState(false);
   const dateInputRef = useRef<HTMLInputElement>(null);
+  const timeInputRef = useRef<HTMLInputElement>(null);
 
   // Derived state
   const availableTypes = useMemo(() => getTypesForCategory(category), [category]);
   const availableTemplates = useMemo(() => getTemplates(category, type), [category, type]);
 
   // Effects
-  useEffect(() => {
-    // Initial Load: Set Default Template if exists
-    if (category === 'protocol' && type === 'ROUTINE' && !selectedTemplate && body === '') {
-       const tmpl = getTemplates('protocol', 'ROUTINE')[0];
-       if (tmpl) {
-         setSelectedTemplate(tmpl);
-         setBody(tmpl.msg);
-         setIcon(tmpl.icon);
-       }
-    }
-  }, []); // Run once on mount
+  // Note: The [category, type] effect below handles the initial load as well, 
+  // since it runs on mount with default values.
+
 
   useEffect(() => {
     const types = getTypesForCategory(category);
-    // Don't reset if we are already on the right category (initial load)
-    if (category === 'protocol' && type === 'ROUTINE') return;
-
-    const newType = types[0] || 'INFO';
-    setType(newType);
-    setSelectedTemplate(null);
-    setIsCustomMessage(false);
-
-    if (category === 'system') {
-      const defaultTemplate = LOG_TEMPLATES.system[0]; 
-      if (defaultTemplate) {
-        setBody(defaultTemplate.msg);
-        setIcon(defaultTemplate.icon);
-      }
-    } else {
-      setBody('');
-      setIcon('📝');
+    const defaultType = types[0] || 'INFO';
+    
+    // When category changes, reset type to the default for that category
+    // This ensures we don't stay on a type that doesn't exist for the new category
+    if (!types.includes(type)) {
+      setType(defaultType);
     }
   }, [category]);
 
   useEffect(() => {
-    if (category === 'system' && type !== 'INFO' && body === LOG_TEMPLATES.system[0]?.msg && !isCustomMessage) {
-       setBody('');
-       setIcon('📝');
+    // When Category or Type changes, auto-select the first template
+    // This ensures the "Preview" and body content always reflect the current selection
+    const templates = getTemplates(category, type);
+    const defaultTemplate = templates[0];
+
+    if (defaultTemplate) {
+      setSelectedTemplate(defaultTemplate);
+      // We do NOT set body here anymore, as the user wants the input to start empty
+      // setBody(defaultTemplate.msg); 
+      setBody(''); // Ensure body is cleared when category/type changes
+      setIcon(defaultTemplate.icon);
+      setIsCustomMessage(false);
+    } else {
+      setSelectedTemplate(null);
+      setBody('');
+      setIcon('📝');
     }
-    setSelectedTemplate(null);
-  }, [type, category]);
+  }, [category, type]);
 
   // Handlers
   const handleTemplateSelect = (tmpl: LogTemplateItem | 'custom') => {
@@ -79,7 +73,8 @@ export function useJournalForm() {
     } else {
       setSelectedTemplate(tmpl);
       setIsCustomMessage(false);
-      setBody(tmpl.msg);
+      // Don't auto-fill body
+      // setBody(tmpl.msg);
       setIcon(tmpl.icon);
     }
   };
@@ -123,7 +118,7 @@ export function useJournalForm() {
         attachments, setAttachments,
         showIconPicker, setShowIconPicker,
     },
-    refs: { dateInputRef },
+    refs: { dateInputRef, timeInputRef },
     derived: { availableTypes, availableTemplates },
     handlers: {
         handleTemplateSelect,

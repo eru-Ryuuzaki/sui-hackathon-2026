@@ -17,6 +17,7 @@ import {
   ChevronDown,
   Paperclip,
   Calendar,
+  Clock,
   Lock,
   Globe
 } from 'lucide-react';
@@ -58,7 +59,7 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
         mood, setMood,
         attachments, setAttachments,
     },
-    refs: { dateInputRef },
+    refs: { dateInputRef, timeInputRef },
     derived: { availableTypes, availableTemplates },
     handlers: {
         handleTemplateSelect,
@@ -68,15 +69,13 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
     }
   } = useJournalForm();
 
-  useEffect(() => {
-    // Force clear body on mount to ensure placeholder is visible
-    handleBodyChange('');
-  }, []);
-
   // Current Category Color
   const categoryColor = CATEGORY_COLORS[category];
   const validationError = validateDate();
-  const sysTrace = `[${date} ${time}][${category.toUpperCase()}]${type}: ${icon} ${body.slice(0, 30)}${body.length > 30 ? '...' : ''}`;
+  // Display template message if body is empty, ensuring preview is never blank
+  const displayBody = body || selectedTemplate?.msg || '';
+  // Removed manual truncation to let CSS handle it
+  const sysTrace = `[${date} ${time}][${category.toUpperCase()}]${type}: ${icon} ${displayBody}`;
 
   const previewTrace = `[${date} ${time}][${category.toUpperCase()}]${type}: ${customIcon} ${customMessage.slice(0, 30)}${customMessage.length > 30 ? '...' : ''}`;
 
@@ -300,7 +299,7 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
           <div className="space-y-3 border border-titanium-grey/20 p-3 bg-white/5 rounded animate-in fade-in slide-in-from-left-2">
             <div className="flex items-center justify-between">
                 <div className="text-titanium-grey flex items-center gap-2 font-bold opacity-70">
-                  <Activity size={12} /> CONFIGURATION
+                  <Activity size={12} /> SECTION 01: CONFIGURATION
                 </div>
             </div>
 
@@ -474,33 +473,51 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
                 <FileText size={12} /> SECTION 03: LOG BODY
               </div>
 
-              {/* Date Picker Trigger - Aligned Right */}
-              <div className="relative group">
-                <button 
-                  onClick={() => dateInputRef.current?.showPicker()}
-                  className="flex items-center gap-2 bg-void-black border border-titanium-grey/30 px-3 py-1 rounded text-[10px] hover:border-neon-cyan transition-colors text-neon-cyan/80 whitespace-nowrap"
-                >
-                  <Calendar size={12} />
-                  <span>{date} {time}</span>
-                </button>
-                {/* Hidden Inputs for Native Picker */}
-                <div className="absolute opacity-0 w-0 h-0 overflow-hidden">
-                   <input 
-                     ref={dateInputRef}
-                     type="date" 
-                     value={date} 
-                     onChange={e => setDate(e.target.value)} 
-                   />
-                   <input 
-                     type="time" 
-                     value={time} 
-                     onChange={e => setTime(e.target.value)} 
-                   />
+              {/* Date & Time Pickers - Split Button Group */}
+              <div className="flex items-center bg-void-black border border-titanium-grey/30 rounded text-[10px] overflow-hidden">
+                {/* Date Picker Trigger */}
+                <div className="relative group border-r border-titanium-grey/30">
+                  <button 
+                    onClick={() => dateInputRef.current?.showPicker()}
+                    className="flex items-center gap-2 px-3 py-1 hover:bg-neon-cyan/10 hover:text-neon-cyan transition-colors text-titanium-grey whitespace-nowrap"
+                  >
+                    <Calendar size={12} />
+                    <span>{date}</span>
+                  </button>
+                  {/* Hidden Date Input */}
+                  <div className="absolute opacity-0 w-0 h-0 overflow-hidden">
+                     <input 
+                       ref={dateInputRef}
+                       type="date" 
+                       value={date} 
+                       onChange={e => setDate(e.target.value)} 
+                     />
+                  </div>
+                </div>
+
+                {/* Time Picker Trigger */}
+                <div className="relative group">
+                  <button 
+                    onClick={() => timeInputRef.current?.showPicker()}
+                    className="flex items-center gap-2 px-3 py-1 hover:bg-neon-cyan/10 hover:text-neon-cyan transition-colors text-titanium-grey whitespace-nowrap"
+                  >
+                    <Clock size={12} />
+                    <span>{time}</span>
+                  </button>
+                  {/* Hidden Time Input */}
+                  <div className="absolute opacity-0 w-0 h-0 overflow-hidden">
+                     <input 
+                       ref={timeInputRef}
+                       type="time" 
+                       value={time} 
+                       onChange={e => setTime(e.target.value)} 
+                     />
+                  </div>
                 </div>
               </div>
             </div>
             
-            <div className="bg-void-black p-2 border-l-2 border-neon-cyan text-[10px] text-titanium-grey break-all font-mono leading-relaxed mb-2 shrink-0">
+            <div className="bg-void-black p-2 border-l-2 border-neon-cyan text-[10px] text-titanium-grey font-mono leading-relaxed mb-2 shrink-0 truncate h-[34px]">
               <span className="text-neon-cyan">&gt; PREVIEW:</span> {sysTrace}
             </div>
 

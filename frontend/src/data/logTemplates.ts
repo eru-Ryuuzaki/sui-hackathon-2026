@@ -1,3 +1,5 @@
+import { type LogTemplateCategory, type LogTemplateItem } from "./logTemplates";
+
 export interface LogTemplateItem {
   type: string;
   icon: string;
@@ -32,78 +34,107 @@ export const CATEGORY_COLORS: Record<LogTemplateCategory, string> = {
 
 export const LOG_TEMPLATES: Record<LogTemplateCategory, LogTemplateItem[]> = {
   system: [
-    { type: "INFO", key: "check", icon: "✅", msg: "System check complete: " },
+    {
+      type: "INFO",
+      key: "check",
+      icon: "✅",
+      msg: "System check completed successfully.",
+    },
     {
       type: "INFO",
       key: "sync",
       icon: "🔄",
-      msg: "Data synchronization finished: ",
+      msg: "Data synchronization finished.",
     },
     { type: "RECHARGE", icon: "🔋", msg: "Energy recharge cycle complete." },
     {
       type: "STABLE",
       icon: "🟢",
-      msg: "Mental stability within optimal range.",
+      msg: "Mental stability is within optimal range.",
     },
-    { type: "OPTIMIZED", icon: "🚀", msg: "Workflow efficiency improved by " },
-    { type: "WARNING", icon: "⚠️", msg: "System resource low: " },
-    { type: "ERROR", icon: "❌", msg: "Critical error detected in module: " },
+    {
+      type: "OPTIMIZED",
+      icon: "🚀",
+      msg: "Workflow efficiency has been improved.",
+    },
+    { type: "WARNING", icon: "⚠️", msg: "System resources are running low." },
+    {
+      type: "ERROR",
+      icon: "❌",
+      msg: "A critical error was detected in the module.",
+    },
     // New Web3/Cyberpunk Flavors
-    { type: "GAS_LEAK", icon: "⛽", msg: "High energy consumption detected: " },
+    { type: "GAS_LEAK", icon: "⛽", msg: "High energy consumption detected." },
     {
       type: "HODL_MODE",
       icon: "💎",
-      msg: "Diamond hands protocol engaged for: ",
+      msg: "Diamond hands protocol engaged.",
     },
-    { type: "RUG_PULLED", icon: "📉", msg: "Unexpected resource loss event: " },
+    {
+      type: "RUG_PULLED",
+      icon: "📉",
+      msg: "Unexpected resource loss event detected.",
+    },
   ],
   protocol: [
     // Merged daily_task + life_event (Routine)
-    { type: "ROUTINE", icon: "✅", msg: "Daily protocol executed: " },
-    { type: "TASK", icon: "🆕", msg: "New directive received: " },
-    { type: "SOCIAL", icon: "💬", msg: "Inter-subject communication logged: " },
+    {
+      type: "ROUTINE",
+      icon: "✅",
+      msg: "Daily protocol executed successfully.",
+    },
+    { type: "TASK", icon: "🆕", msg: "New directive received." },
+    { type: "SOCIAL", icon: "💬", msg: "Inter-subject communication logged." },
     {
       type: "TRANSACTION",
       icon: "💳",
-      msg: "Resource transaction confirmed: ",
+      msg: "Resource transaction confirmed.",
     },
-    { type: "TRAVEL", icon: "🚀", msg: "Relocated to sector: " },
-    { type: "LEARNING", icon: "🧠", msg: "Knowledge database updated: " },
+    { type: "TRAVEL", icon: "🚀", msg: "Relocated to new sector." },
+    { type: "LEARNING", icon: "🧠", msg: "Knowledge database updated." },
   ],
   achievement: [
     // Merged life_event (Milestones)
-    { type: "MILESTONE", icon: "🏆", msg: "Major milestone reached: " },
+    { type: "MILESTONE", icon: "🏆", msg: "Major milestone reached." },
     {
       type: "LEVEL_UP",
       icon: "🆙",
-      msg: "Construct level increased. New capabilities: ",
+      msg: "Construct level increased with new capabilities.",
     },
-    { type: "TITLE", icon: "🏷️", msg: "Acquired new designation: " },
-    { type: "BADGE", icon: "🏅", msg: "Neural Badge unlocked: " },
+    { type: "TITLE", icon: "🏷️", msg: "Acquired new designation." },
+    { type: "BADGE", icon: "🏅", msg: "Neural Badge unlocked." },
   ],
   challenge: [
-    { type: "VICTORY", icon: "✌️", msg: "Obstacle overcome: " },
-    { type: "SETBACK", icon: "🥀", msg: "Temporary system setback: " },
+    { type: "VICTORY", icon: "✌️", msg: "Obstacle successfully overcome." },
+    {
+      type: "SETBACK",
+      icon: "🥀",
+      msg: "Temporary system setback encountered.",
+    },
     {
       type: "CONFLICT",
       icon: "⚔️",
-      msg: "Conflict resolution protocol engaged: ",
+      msg: "Conflict resolution protocol engaged.",
     },
-    { type: "OVERLOAD", icon: "🔥", msg: "Mental overload imminent: " },
-    { type: "HEALTH", icon: "💊", msg: "Biological status update: " },
+    { type: "OVERLOAD", icon: "🔥", msg: "Mental overload is imminent." },
+    { type: "HEALTH", icon: "💊", msg: "Biological status update logged." },
   ],
   dream: [
-    { type: "REM_CYCLE", icon: "💤", msg: "REM cycle data logged: " },
+    { type: "REM_CYCLE", icon: "💤", msg: "REM cycle data logged." },
     {
       type: "NIGHTMARE",
       icon: "👹",
-      msg: "Stress simulation (Nightmare) detected: ",
+      msg: "Stress simulation (Nightmare) detected.",
     },
-    { type: "LUCID", icon: "✨", msg: "Lucid state achieved. Control level: " },
+    {
+      type: "LUCID",
+      icon: "✨",
+      msg: "Lucid state achieved with high control level.",
+    },
     {
       type: "VISION",
       icon: "👁️",
-      msg: "Abstract data visualization (Vision): ",
+      msg: "Abstract data visualization (Vision) recorded.",
     },
     { type: "DEJA_VU", icon: "🌀", msg: "Memory anomaly (Deja Vu) detected." },
   ],
