@@ -1,12 +1,13 @@
 import { Card } from '@/components/ui/Card';
-import { useCurrentAccount, useDisconnectWallet, ConnectButton } from '@mysten/dapp-kit';
+import { useCurrentAccount, useDisconnectWallet, ConnectButton, useSuiClientQuery } from '@mysten/dapp-kit';
 import { useUserStore } from '@/hooks/useUserStore';
 import { CyberAvatar } from '@/components/ui/CyberAvatar';
 import { LoginSelector } from '@/components/LoginSelector';
 import { SettingsModal } from '@/components/SettingsModal';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Power, Radio, Settings } from 'lucide-react';
 import { triggerAlert } from '@/components/ui/SystemAlert';
+import { formatBalance } from '@/utils/formatAmount';
 
 export function HUD() {
   const account = useCurrentAccount();
@@ -18,17 +19,45 @@ export function HUD() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false); 
 
+  // Fetch Balance
+  const { data: balanceData } = useSuiClientQuery(
+    'getBalance',
+    { owner: account?.address || '' },
+    { enabled: !!account, refetchInterval: 5000 }
+  );
+
+  // Debugging: Log balance data
+  console.log('Wallet Address:', account?.address);
+  console.log('Balance Data:', balanceData);
+
   // ... rest of logic ...
   // Determine effective connection state (Wallet OR zkLogin)
   const isConnected = !!account || !!currentUser;
   const currentAddress = account?.address || currentUser?.address;
   const connectionType = account ? 'WALLET' : 'ZKLOGIN';
   
+  // Calculate Energy (10 Bars)
+  const energyState = useMemo(() => {
+    if (!balanceData) return { bars: 0, text: '0 SUI' };
+    
+    const rawBalance = BigInt(balanceData.totalBalance);
+    const sui = Number(rawBalance) / 1_000_000_000; // MIST to SUI
+    
+    // Logic: 1 SUI = 100% (10 Bars). Max cap at 10.
+    // 0.1 SUI = 1 Bar
+    const bars = Math.min(10, Math.floor(sui * 10)); 
+    
+    return {
+      bars,
+      text: formatBalance(rawBalance) + ' SUI'
+    };
+  }, [balanceData]);
+
   // Mock Stats
   const stats = {
     level: isConnected ? 1 : 0,
     exp: isConnected ? '0/1000' : '0/0',
-    energy: isConnected ? 10 : 0, 
+    energy: isConnected ? energyState.bars : 0, 
     status: isConnected ? 'ONLINE' : 'OFFLINE'
   };
 
@@ -166,7 +195,10 @@ export function HUD() {
               </div>
 
               <div>
-                <div className="text-xs text-titanium-grey mb-1">ENERGY</div>
+                <div className="text-xs text-titanium-grey mb-1 flex justify-between">
+                  <span>ENERGY</span>
+                  <span className="text-neon-cyan">{energyState.text}</span>
+                </div>
                 <div className="flex gap-0.5">
                   {[...Array(10)].map((_, i) => (
                     <div 
