@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { useJournalForm } from '@/hooks/useJournalForm';
@@ -13,7 +14,6 @@ import {
   XCircle, 
   Cloud,
   Smile,
-  Zap,
   ChevronDown,
   Paperclip,
   Calendar,
@@ -21,6 +21,7 @@ import {
   Globe
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { GlitchModal } from '@/components/ui/GlitchModal';
 
 // --- Constants ---
 const WEATHER_ICONS = ['☀️', '☁️', '🌧️', '⛈️', '❄️', '🌪️'];
@@ -37,6 +38,12 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
   const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
   const { addLog } = useMemoryStore(); // Still used for local optimism/fallback
   
+  const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
+  const [customIcon, setCustomIcon] = useState('📝');
+  const [customMessage, setCustomMessage] = useState('');
+
+  const [mode, setMode] = useState<'AUTO' | 'MANUAL'>('AUTO');
+
   const { 
     formState: {
         date, setDate,
@@ -50,7 +57,6 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
         weather, setWeather,
         mood, setMood,
         attachments, setAttachments,
-        showIconPicker, setShowIconPicker,
     },
     refs: { dateInputRef },
     derived: { availableTypes, availableTemplates },
@@ -62,10 +68,37 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
     }
   } = useJournalForm();
 
+  useEffect(() => {
+    // Force clear body on mount to ensure placeholder is visible
+    handleBodyChange('');
+  }, []);
+
   // Current Category Color
   const categoryColor = CATEGORY_COLORS[category];
   const validationError = validateDate();
   const sysTrace = `[${date} ${time}][${category.toUpperCase()}]${type}: ${icon} ${body.slice(0, 30)}${body.length > 30 ? '...' : ''}`;
+
+  const previewTrace = `[${date} ${time}][${category.toUpperCase()}]${type}: ${customIcon} ${customMessage.slice(0, 30)}${customMessage.length > 30 ? '...' : ''}`;
+
+
+  const handleCustomModalConfirm = () => {
+    handleIconChange(customIcon);
+    handleBodyChange(customMessage);
+    setIsCustomModalOpen(false);
+    // Ensure we stay in MANUAL mode if confirmed
+    setMode('MANUAL');
+  };
+
+  const handleManualInit = () => {
+      setCustomIcon(icon || '📝');
+      setCustomMessage(''); // Clear body for manual entry
+      setIsCustomModalOpen(true);
+  };
+  
+  const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const tmpl = availableTemplates.find(t => `${t.type}-${t.key || 'default'}` === e.target.value);
+      if (tmpl) handleTemplateSelect(tmpl);
+  };
 
   const handleUpload = () => {
     // 1. Process Attachments
@@ -170,6 +203,74 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
   };
 
   return (
+    <>
+    {/* Custom Message Modal */}
+    <GlitchModal
+        isOpen={isCustomModalOpen}
+        onClose={() => setIsCustomModalOpen(false)}
+        title="CUSTOM TRACE CONFIGURATION"
+        className="max-w-md border-neon-cyan/50 shadow-[0_0_50px_rgba(0,243,255,0.15)]"
+    >
+        <div className="space-y-4 font-mono">
+            <div className="text-xs text-titanium-grey border-l-2 border-neon-cyan pl-2 py-1">
+                &gt; INITIALIZE CUSTOM PROTOCOL.<br/>
+                &gt; SELECT IDENTIFIER AND CONTENT.
+            </div>
+
+            {/* Icon Selection */}
+            <div className="space-y-2">
+                <label className="text-[10px] text-neon-cyan flex items-center gap-2">
+                    ICON IDENTIFIER
+                </label>
+                <div className="grid grid-cols-8 gap-1 bg-white/5 p-2 rounded border border-titanium-grey/20">
+                    {COMMON_EMOJIS.map(e => (
+                        <button
+                            key={e}
+                            onClick={() => setCustomIcon(e)}
+                            className={`aspect-square flex items-center justify-center rounded text-lg hover:bg-white/10 transition-colors ${customIcon === e ? 'bg-neon-cyan/20 ring-1 ring-neon-cyan' : ''}`}
+                        >
+                            {e}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Message Body */}
+            <div className="space-y-2">
+                <label className="text-[10px] text-neon-cyan flex items-center gap-2">
+                    TRACE CONTENT
+                </label>
+                <textarea
+                    value={customMessage}
+                    onChange={(e) => setCustomMessage(e.target.value)}
+                    placeholder="Enter trace data..."
+                    className="w-full bg-void-black border border-titanium-grey/50 p-3 focus:border-neon-cyan outline-none text-white text-sm font-mono h-32 resize-none"
+                    autoFocus
+                />
+            </div>
+
+             {/* Preview */}
+             <div className="bg-void-black p-2 border border-titanium-grey/30 rounded text-[10px] text-titanium-grey break-all font-mono">
+                  <span className="text-neon-cyan">&gt; PREVIEW:</span> {previewTrace}
+             </div>
+
+            <div className="flex justify-end gap-2 mt-4">
+                <button 
+                    onClick={() => setIsCustomModalOpen(false)}
+                    className="px-4 py-2 text-titanium-grey hover:text-white transition-colors text-xs"
+                >
+                    [CANCEL]
+                </button>
+                <button 
+                    onClick={handleCustomModalConfirm}
+                    className="bg-neon-cyan text-void-black px-4 py-2 text-xs font-bold hover:bg-white transition-colors flex items-center gap-2"
+                >
+                    <Save size={12} /> CONFIRM
+                </button>
+            </div>
+        </div>
+    </GlitchModal>
+
     <div className="h-full flex flex-col p-4 overflow-hidden font-mono text-xs">
       {/* Header */}
       <div 
@@ -193,120 +294,167 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
 
       <div className="flex-1 flex gap-4 min-h-0">
         {/* Left Column: Waterfall Layout (Scrollable) */}
-        <div className="w-[30%] flex flex-col gap-4 min-h-0 overflow-y-auto scrollbar-thin pr-2">
+        <div className="w-[30%] flex flex-col gap-4 min-h-0">
           
-          {/* Section 1: Metadata */}
+          {/* Section 1: Configuration */}
           <div className="space-y-3 border border-titanium-grey/20 p-3 bg-white/5 rounded animate-in fade-in slide-in-from-left-2">
-            <div className="text-titanium-grey flex items-center gap-2 font-bold opacity-70">
-              <Activity size={12} /> SECTION 01: PARAMETERS
+            <div className="flex items-center justify-between">
+                <div className="text-titanium-grey flex items-center gap-2 font-bold opacity-70">
+                  <Activity size={12} /> CONFIGURATION
+                </div>
+            </div>
+
+            {/* Mode Switcher - Full Width */}
+            <div className="flex border border-titanium-grey/30 rounded overflow-hidden text-[9px] shrink-0 w-full">
+                <button 
+                    onClick={() => setMode('AUTO')}
+                    className={cn(
+                        "flex-1 px-2 py-1 transition-colors whitespace-nowrap text-center",
+                        mode === 'AUTO' ? "bg-neon-cyan text-void-black font-bold" : "text-titanium-grey hover:text-white"
+                    )}
+                >
+                    🤖 AUTO
+                </button>
+                <div className="w-px bg-titanium-grey/30"></div>
+                <button 
+                    onClick={() => setMode('MANUAL')}
+                    className={cn(
+                        "flex-1 px-2 py-1 transition-colors whitespace-nowrap text-center",
+                        mode === 'MANUAL' ? "bg-neon-purple text-void-black font-bold" : "text-titanium-grey hover:text-white"
+                    )}
+                >
+                    ✍️ MANUAL
+                </button>
             </div>
             
             <div className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-[10px] text-titanium-grey">CATEGORY</label>
-                <div className="relative">
-                  <select 
-                    value={category} 
-                    onChange={e => setCategory(e.target.value as LogTemplateCategory)} 
-                    className="w-full bg-void-black border px-2 py-1 outline-none text-white appearance-none uppercase transition-colors duration-300"
-                    style={{ 
-                      borderColor: `${categoryColor}80`,
-                      boxShadow: `0 0 5px ${categoryColor}20` 
-                    }}
-                  >
-                    {Object.keys(LOG_TEMPLATES).map(c => <option key={c} value={c}>{c.replace('_', ' ')}</option>)}
-                  </select>
-                  <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-titanium-grey pointer-events-none" />
+              {/* Row 1: Category & Type */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-titanium-grey">CATEGORY</label>
+                  <div className="relative">
+                    <select 
+                      value={category} 
+                      onChange={e => setCategory(e.target.value as LogTemplateCategory)} 
+                      className="w-full bg-void-black border px-2 py-1 outline-none text-white appearance-none uppercase transition-colors duration-300 text-[10px]"
+                      style={{ 
+                        borderColor: `${categoryColor}80`,
+                        boxShadow: `0 0 5px ${categoryColor}20` 
+                      }}
+                    >
+                      {Object.keys(LOG_TEMPLATES).map(c => <option key={c} value={c}>{c.replace('_', ' ')}</option>)}
+                    </select>
+                    <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-titanium-grey pointer-events-none" />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] text-titanium-grey">TYPE</label>
+                  <div className="relative">
+                    <select 
+                      value={type} 
+                      onChange={e => setType(e.target.value)} 
+                      className="w-full bg-void-black border border-titanium-grey/50 px-2 py-1 focus:border-neon-cyan outline-none text-white appearance-none text-[10px]"
+                    >
+                      {availableTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-titanium-grey pointer-events-none" />
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] text-titanium-grey">TYPE</label>
-                <div className="relative">
-                  <select 
-                    value={type} 
-                    onChange={e => setType(e.target.value)} 
-                    className="w-full bg-void-black border border-titanium-grey/50 px-2 py-1 focus:border-neon-cyan outline-none text-white appearance-none"
-                  >
-                    {availableTypes.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                  <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-titanium-grey pointer-events-none" />
+              {/* Row 2: Template (Auto) OR Manual Button (Manual) */}
+              <div className="space-y-1 h-[42px] flex flex-col justify-end">
+                 {mode === 'AUTO' ? (
+                   <>
+                    <label className="text-[10px] text-titanium-grey">TEMPLATE</label>
+                    <div className="relative">
+                      <select 
+                        value={selectedTemplate ? `${selectedTemplate.type}-${selectedTemplate.key || 'default'}` : ''} 
+                        onChange={handleTemplateChange}
+                        className="w-full bg-void-black border border-titanium-grey/50 px-2 py-1 focus:border-neon-cyan outline-none text-white appearance-none truncate text-[10px]"
+                      >
+                        {availableTemplates.map((t, idx) => (
+                          <option key={idx} value={`${t.type}-${t.key || 'default'}`}>
+                            {t.icon} {t.msg}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-titanium-grey pointer-events-none" />
+                    </div>
+                   </>
+                 ) : (
+                    <button 
+                        onClick={handleManualInit}
+                        className="w-full bg-transparent border border-neon-purple/50 text-neon-purple hover:bg-neon-purple/10 hover:border-neon-purple transition-all px-3 py-1.5 text-[10px] font-bold tracking-widest flex items-center justify-center gap-2 group h-[32px]"
+                    >
+                        <span>&gt; INITIALIZE CUSTOM TRACE &lt;</span>
+                    </button>
+                 )}
+              </div>
+
+              {/* Row 3: Vitals (Weather & Mood) */}
+              <div className="pt-2 border-t border-titanium-grey/20">
+                <div className="flex flex-col gap-3">
+                   {/* Weather Block */}
+                   <div className="space-y-1.5">
+                     <label className="text-[10px] text-titanium-grey flex items-center gap-1.5 font-bold tracking-wider">
+                       <Cloud size={10} className="text-neon-cyan"/> 
+                       WEATHER
+                     </label>
+                     <div className="grid grid-cols-6 gap-1 p-1 bg-void-black/50 border border-titanium-grey/10 rounded">
+                        {WEATHER_ICONS.map(ic => (
+                          <button 
+                            key={ic} 
+                            onClick={() => setWeather(ic)}
+                            className={`aspect-square flex items-center justify-center rounded text-sm transition-all duration-200 ${
+                              weather === ic 
+                                ? 'bg-neon-cyan text-void-black scale-110 shadow-[0_0_8px_rgba(0,243,255,0.4)]' 
+                                : 'text-white/60 hover:text-white hover:bg-white/10'
+                            }`}
+                            title={ic}
+                          >
+                            {ic}
+                          </button>
+                        ))}
+                     </div>
+                   </div>
+
+                   {/* Mood Block */}
+                   <div className="space-y-1.5">
+                     <label className="text-[10px] text-titanium-grey flex items-center gap-1.5 font-bold tracking-wider">
+                       <Smile size={10} className="text-neon-cyan"/> 
+                       MOOD
+                     </label>
+                     <div className="grid grid-cols-6 gap-1 p-1 bg-void-black/50 border border-titanium-grey/10 rounded">
+                        {MOOD_ICONS.map(ic => (
+                          <button 
+                            key={ic} 
+                            onClick={() => setMood(ic)}
+                            className={`aspect-square flex items-center justify-center rounded text-sm transition-all duration-200 ${
+                              mood === ic 
+                                ? 'bg-neon-cyan text-void-black scale-110 shadow-[0_0_8px_rgba(0,243,255,0.4)]' 
+                                : 'text-white/60 hover:text-white hover:bg-white/10'
+                            }`}
+                            title={ic}
+                          >
+                            {ic}
+                          </button>
+                        ))}
+                     </div>
+                   </div>
                 </div>
               </div>
 
-              <div className="space-y-1">
-                 <label className="text-[10px] text-titanium-grey">TEMPLATE</label>
-                 <div className="relative">
-                   <select 
-                     value={selectedTemplate ? `${selectedTemplate.type}-${selectedTemplate.key || 'default'}` : 'custom'} 
-                     onChange={(e) => {
-                       if (e.target.value === 'custom') {
-                         handleTemplateSelect('custom');
-                       } else {
-                         const tmpl = availableTemplates.find(t => `${t.type}-${t.key || 'default'}` === e.target.value);
-                         if (tmpl) handleTemplateSelect(tmpl);
-                       }
-                     }}
-                     className="w-full bg-void-black border border-titanium-grey/50 px-2 py-1 focus:border-neon-cyan outline-none text-white appearance-none truncate"
-                   >
-                     <option value="custom">✍️ Custom Message</option>
-                     {availableTemplates.map((t, idx) => (
-                       <option key={idx} value={`${t.type}-${t.key || 'default'}`}>
-                         {t.icon} {t.msg}
-                       </option>
-                     ))}
-                   </select>
-                   <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-titanium-grey pointer-events-none" />
-                 </div>
-              </div>
             </div>
           </div>
 
-          {/* Section 2: Vitals */}
-          <div className="space-y-3 border border-titanium-grey/20 p-3 bg-white/5 rounded animate-in fade-in slide-in-from-left-2 delay-75">
-            <div className="text-titanium-grey flex items-center gap-2 font-bold opacity-70">
-              <Zap size={12} /> SECTION 02: VITALS
-            </div>
-
-            <div className="flex flex-col gap-4">
-              <div className="space-y-1">
-                <label className="text-[10px] text-titanium-grey block"><Cloud size={10} className="inline mr-1"/> WEATHER</label>
-                <div className="grid grid-cols-6 gap-1 bg-void-black border border-titanium-grey/30 rounded p-1">
-                  {WEATHER_ICONS.map(ic => (
-                    <button 
-                      key={ic} 
-                      onClick={() => setWeather(ic)}
-                      className={`aspect-square flex items-center justify-center hover:bg-white/10 rounded ${weather === ic ? 'bg-neon-cyan/20' : ''}`}
-                    >
-                      {ic}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-titanium-grey block"><Smile size={10} className="inline mr-1"/> MOOD</label>
-                <div className="grid grid-cols-6 gap-1 bg-void-black border border-titanium-grey/30 rounded p-1">
-                  {MOOD_ICONS.map(ic => (
-                    <button 
-                      key={ic} 
-                      onClick={() => setMood(ic)}
-                      className={`aspect-square flex items-center justify-center hover:bg-white/10 rounded ${mood === ic ? 'bg-neon-cyan/20' : ''}`}
-                    >
-                      {ic}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Section 3: Artifacts */}
-          <div className="flex flex-col border border-titanium-grey/20 p-3 bg-white/5 rounded animate-in fade-in slide-in-from-left-2 delay-100">
+          {/* Section 2: Artifacts */}
+          <div className="flex flex-col border border-titanium-grey/20 p-3 bg-white/5 rounded animate-in fade-in slide-in-from-left-2 delay-100 flex-1 min-h-0">
             <div className="text-titanium-grey flex items-center gap-2 font-bold opacity-70 mb-3 shrink-0">
-              <Paperclip size={12} /> SECTION 03: ARTIFACTS
+              <Paperclip size={12} /> SECTION 02: ARTIFACTS
             </div>
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
               <AttachmentUploader 
                 attachments={attachments} 
                 onAttachmentsChange={setAttachments} 
@@ -322,60 +470,33 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
           {/* Section 4: Log Body */}
           <div className="flex-1 space-y-3 border border-titanium-grey/20 p-3 bg-white/5 rounded flex flex-col h-full">
             <div className="text-titanium-grey flex items-center justify-between font-bold opacity-70 shrink-0">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <FileText size={12} /> SECTION 04: LOG BODY
-                </div>
-
-                {/* Date Picker Trigger */}
-                <div className="relative group">
-                  <button 
-                    onClick={() => dateInputRef.current?.showPicker()}
-                    className="flex items-center gap-2 bg-void-black border border-titanium-grey/30 px-2 py-0.5 rounded text-[10px] hover:border-neon-cyan transition-colors text-neon-cyan/80"
-                  >
-                    <Calendar size={10} />
-                    <span>{date} {time}</span>
-                  </button>
-                  {/* Hidden Inputs for Native Picker */}
-                  <div className="absolute opacity-0 w-0 h-0 overflow-hidden">
-                     <input 
-                       ref={dateInputRef}
-                       type="date" 
-                       value={date} 
-                       onChange={e => setDate(e.target.value)} 
-                     />
-                     <input 
-                       type="time" 
-                       value={time} 
-                       onChange={e => setTime(e.target.value)} 
-                     />
-                  </div>
-                </div>
+              <div className="flex items-center gap-2">
+                <FileText size={12} /> SECTION 03: LOG BODY
               </div>
-              
-              {/* Icon Picker */}
-              <div className="relative">
+
+              {/* Date Picker Trigger - Aligned Right */}
+              <div className="relative group">
                 <button 
-                  onClick={() => setShowIconPicker(!showIconPicker)}
-                  className="flex items-center gap-1 bg-void-black border border-titanium-grey/30 px-2 py-0.5 rounded text-[10px] hover:border-neon-cyan transition-colors"
+                  onClick={() => dateInputRef.current?.showPicker()}
+                  className="flex items-center gap-2 bg-void-black border border-titanium-grey/30 px-3 py-1 rounded text-[10px] hover:border-neon-cyan transition-colors text-neon-cyan/80 whitespace-nowrap"
                 >
-                  <span>ICON:</span>
-                  <span className="text-base leading-none">{icon}</span>
+                  <Calendar size={12} />
+                  <span>{date} {time}</span>
                 </button>
-                
-                {showIconPicker && (
-                  <div className="absolute right-0 top-full mt-1 z-50 bg-void-black border border-neon-cyan p-2 rounded shadow-[0_0_15px_rgba(0,243,255,0.2)] grid grid-cols-6 gap-1 w-48">
-                    {COMMON_EMOJIS.map(e => (
-                      <button 
-                        key={e} 
-                        onClick={() => handleIconChange(e)}
-                        className="p-1 hover:bg-white/10 rounded text-lg text-center"
-                      >
-                        {e}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                {/* Hidden Inputs for Native Picker */}
+                <div className="absolute opacity-0 w-0 h-0 overflow-hidden">
+                   <input 
+                     ref={dateInputRef}
+                     type="date" 
+                     value={date} 
+                     onChange={e => setDate(e.target.value)} 
+                   />
+                   <input 
+                     type="time" 
+                     value={time} 
+                     onChange={e => setTime(e.target.value)} 
+                   />
+                </div>
               </div>
             </div>
             
@@ -386,8 +507,8 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
             <textarea 
               value={body}
               onChange={e => handleBodyChange(e.target.value)}
-              placeholder="Enter log details or select a template..."
-              className="flex-1 w-full bg-void-black border border-titanium-grey/50 p-4 focus:border-neon-cyan outline-none text-white resize-none scrollbar-thin text-sm leading-relaxed font-mono"
+              placeholder="> Awaiting input..."
+              className="flex-1 w-full bg-void-black border border-titanium-grey/50 p-4 focus:border-neon-cyan outline-none text-white resize-none scrollbar-thin text-sm leading-relaxed font-mono placeholder:text-titanium-grey/30"
               autoFocus
             />
           </div>
@@ -397,16 +518,12 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
 
       {/* Footer Actions */}
       <div className="flex justify-end gap-4 pt-2 border-t border-titanium-grey/30 mt-4 shrink-0">
-        <button onClick={onExit} className="px-4 py-2 text-titanium-grey hover:text-white transition-colors">
-          [CANCEL]
-        </button>
-
         <div className="flex items-center gap-2">
             {/* Encryption Toggle */}
             <button 
               onClick={() => setIsEncrypted(!isEncrypted)}
               className={cn(
-                "flex items-center gap-2 px-3 py-2 text-[10px] font-bold tracking-wider border transition-all duration-300",
+                "flex items-center justify-center gap-2 px-3 py-2 text-[10px] font-bold tracking-wider border transition-all duration-300 w-32",
                 isEncrypted 
                   ? "border-matrix-green text-matrix-green bg-matrix-green/10" 
                   : "border-titanium-grey text-titanium-grey hover:text-white"
@@ -432,5 +549,6 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -6,8 +6,9 @@ import type { Attachment } from '@/components/ui/AttachmentUploader';
 export function useJournalForm() {
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [time, setTime] = useState(format(new Date(), 'HH:mm'));
-  const [category, setCategory] = useState<LogTemplateCategory>('system');
-  const [type, setType] = useState('INFO');
+  // Default to Protocol -> Routine
+  const [category, setCategory] = useState<LogTemplateCategory>('protocol');
+  const [type, setType] = useState('ROUTINE');
   const [isEncrypted, setIsEncrypted] = useState(true);
   
   const [selectedTemplate, setSelectedTemplate] = useState<LogTemplateItem | null>(null);
@@ -28,7 +29,22 @@ export function useJournalForm() {
 
   // Effects
   useEffect(() => {
+    // Initial Load: Set Default Template if exists
+    if (category === 'protocol' && type === 'ROUTINE' && !selectedTemplate && body === '') {
+       const tmpl = getTemplates('protocol', 'ROUTINE')[0];
+       if (tmpl) {
+         setSelectedTemplate(tmpl);
+         setBody(tmpl.msg);
+         setIcon(tmpl.icon);
+       }
+    }
+  }, []); // Run once on mount
+
+  useEffect(() => {
     const types = getTypesForCategory(category);
+    // Don't reset if we are already on the right category (initial load)
+    if (category === 'protocol' && type === 'ROUTINE') return;
+
     const newType = types[0] || 'INFO';
     setType(newType);
     setSelectedTemplate(null);
