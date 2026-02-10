@@ -13,7 +13,6 @@ const faucet_controller_1 = require("./faucet.controller");
 const hive_controller_1 = require("./hive.controller");
 const memory_controller_1 = require("./memory.controller");
 const construct_controller_1 = require("./construct.controller");
-const transaction_controller_1 = require("./transaction.controller");
 const zklogin_controller_1 = require("./zklogin.controller");
 const construct_entity_1 = require("../entities/construct.entity");
 const memory_shard_entity_1 = require("../entities/memory-shard.entity");
@@ -32,7 +31,6 @@ exports.ApiModule = ApiModule = __decorate([
             hive_controller_1.HiveController,
             memory_controller_1.MemoryController,
             construct_controller_1.ConstructController,
-            transaction_controller_1.TransactionController,
             zklogin_controller_1.ZkLoginController,
         ],
         providers: [

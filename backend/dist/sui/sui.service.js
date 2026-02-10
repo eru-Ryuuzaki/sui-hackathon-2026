@@ -61,30 +61,6 @@ let SuiService = SuiService_1 = class SuiService {
     getPackageId() {
         return this.configService.get('SUI_PACKAGE_ID', '');
     }
-    async buildEngraveTransaction(dto) {
-        const tx = new transactions_1.TransactionBlock();
-        tx.setSender(dto.sender);
-        const packageId = this.getPackageId();
-        const hiveId = this.configService.get('HIVE_OBJECT_ID');
-        if (!hiveId || !packageId) {
-            throw new Error("Configuration missing: HIVE_OBJECT_ID or SUI_PACKAGE_ID");
-        }
-        tx.moveCall({
-            target: `${packageId}::core::engrave`,
-            arguments: [
-                tx.object(dto.construct_id),
-                tx.object(hiveId),
-                tx.object('0x6'),
-                tx.pure(dto.content),
-                tx.pure(dto.emotion_val),
-                tx.pure(dto.category),
-                tx.pure(dto.is_encrypted),
-                tx.pure(dto.blob_id ? [dto.blob_id] : []),
-            ],
-        });
-        const txBytes = await tx.build({ client: this.client });
-        return Buffer.from(txBytes).toString('base64');
-    }
 };
 exports.SuiService = SuiService;
 exports.SuiService = SuiService = SuiService_1 = __decorate([

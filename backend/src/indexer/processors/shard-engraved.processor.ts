@@ -21,7 +21,7 @@ export class ShardEngravedProcessor implements EventProcessor {
   }
 
   async process(event: SuiEvent): Promise<void> {
-    const { subject, construct_id, shard_id, timestamp, category, is_encrypted, content_snippet } = event.parsedJson as any;
+    const { subject, construct_id, shard_id, timestamp, category, mood, is_encrypted, content_snippet } = event.parsedJson as any;
 
     await this.constructService.findOrCreate(construct_id, subject);
 
@@ -32,7 +32,7 @@ export class ShardEngravedProcessor implements EventProcessor {
       shard.shard_index = Number(shard_id);
       shard.timestamp = timestamp;
       shard.content = content_snippet;
-      shard.emotion_val = 0;
+      shard.emotion_val = mood;
       shard.category = category;
       shard.is_encrypted = is_encrypted;
       shard.tx_digest = event.id.txDigest;

@@ -4,7 +4,6 @@ import { FaucetController } from './faucet.controller';
 import { HiveController } from './hive.controller';
 import { MemoryController } from './memory.controller';
 import { ConstructController } from './construct.controller';
-import { TransactionController } from './transaction.controller';
 import { ZkLoginController } from './zklogin.controller';
 import { Construct } from '../entities/construct.entity';
 import { MemoryShard } from '../entities/memory-shard.entity';
@@ -20,7 +19,6 @@ import { MemoryService } from '../services/memory.service';
     HiveController,
     MemoryController,
     ConstructController,
-    TransactionController,
     ZkLoginController,
   ],
   providers: [

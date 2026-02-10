@@ -1,9 +1,9 @@
-import { Transaction } from '@mysten/sui/transactions';
+import { Transaction } from "@mysten/sui/transactions";
 
-// TODO: Replace with actual IDs after deployment
-export const PACKAGE_ID = '0x_YOUR_PACKAGE_ID'; 
-export const HIVE_STATE_ID = '0x_YOUR_HIVE_STATE_ID';
-export const MODULE_NAME = 'core';
+// Load from environment variables
+export const PACKAGE_ID = import.meta.env.VITE_SUI_PACKAGE_ID;
+export const HIVE_STATE_ID = import.meta.env.VITE_HIVE_STATE_ID;
+export const MODULE_NAME = import.meta.env.VITE_SUI_MODULE_NAME || "core";
 
 export const buildEngraveTx = (
   constructId: string,
@@ -12,7 +12,7 @@ export const buildEngraveTx = (
   category: number,
   isEncrypted: boolean,
   blobId?: string,
-  mediaType?: string
+  mediaType?: string,
 ) => {
   const tx = new Transaction();
 
@@ -32,13 +32,13 @@ export const buildEngraveTx = (
     arguments: [
       tx.object(constructId),
       tx.object(HIVE_STATE_ID),
-      tx.object('0x6'), // Clock
+      tx.object("0x6"), // Clock
       tx.pure.string(content),
       tx.pure.u8(emotionVal),
       tx.pure.u8(category),
       tx.pure.bool(isEncrypted),
-      tx.pure.option('string', blobId || null),
-      tx.pure.option('string', mediaType || null)
+      tx.pure.option("string", blobId || null),
+      tx.pure.option("string", mediaType || null),
     ],
   });
 
@@ -51,10 +51,7 @@ export const buildJackInTx = () => {
   // jack_in(hive: &mut HiveState, clock: &Clock)
   tx.moveCall({
     target: `${PACKAGE_ID}::${MODULE_NAME}::jack_in`,
-    arguments: [
-      tx.object(HIVE_STATE_ID),
-      tx.object('0x6')
-    ],
+    arguments: [tx.object(HIVE_STATE_ID), tx.object("0x6")],
   });
 
   return tx;
