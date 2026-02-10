@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { Construct } from '../entities/construct.entity';
 
 @ApiTags('Construct')
-@Controller('api/construct')
+@Controller('construct')
 export class ConstructController {
   constructor(
     @InjectRepository(Construct)

@@ -7,7 +7,7 @@ import { MemoryShard } from '../entities/memory-shard.entity';
 import { NeuralBadge } from '../entities/neural-badge.entity';
 
 @ApiTags('Hive')
-@Controller('api/hive')
+@Controller('hive')
 export class HiveController {
   constructor(
     @InjectRepository(Construct)

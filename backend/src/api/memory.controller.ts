@@ -3,7 +3,7 @@ import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { MemoryService } from '../services/memory.service';
 
 @ApiTags('Memory')
-@Controller('api/memory')
+@Controller('memory')
 export class MemoryController {
   constructor(
     private memoryService: MemoryService,
