@@ -53,3 +53,12 @@ vendor/**/*
 !vendor/README.md
 
 /package-lock.json
+
+# Frontend build artifacts
+frontend/dist/
+frontend/build/
+frontend/.vite/
+
+# Backend build artifacts
+backend/dist/
+backend/build/
