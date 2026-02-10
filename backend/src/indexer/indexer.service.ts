@@ -4,25 +4,27 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { SuiClient, getFullnodeUrl } from '@mysten/sui.js/client';
-import { Construct } from '../entities/construct.entity';
-import { MemoryShard } from '../entities/memory-shard.entity';
 import { EventCursor } from '../entities/event-cursor.entity';
+import { EventProcessor } from './processors/event-processor.interface';
+import { ShardEngravedProcessor } from './processors/shard-engraved.processor';
+import { SubjectJackedInProcessor } from './processors/subject-jacked-in.processor';
 
 @Injectable()
 export class IndexerService implements OnModuleInit {
   private readonly logger = new Logger(IndexerService.name);
   private suiClient: SuiClient;
   private packageId: string;
+  private processors: EventProcessor[];
 
   constructor(
-    @InjectRepository(Construct)
-    private constructRepo: Repository<Construct>,
-    @InjectRepository(MemoryShard)
-    private shardRepo: Repository<MemoryShard>,
     @InjectRepository(EventCursor)
     private cursorRepo: Repository<EventCursor>,
     private configService: ConfigService,
-  ) {}
+    private shardEngravedProcessor: ShardEngravedProcessor,
+    private subjectJackedInProcessor: SubjectJackedInProcessor,
+  ) {
+    this.processors = [shardEngravedProcessor, subjectJackedInProcessor];
+  }
 
   async onModuleInit() {
     const network = this.configService.get<string>('SUI_NETWORK', 'testnet');
@@ -42,50 +44,13 @@ export class IndexerService implements OnModuleInit {
       return;
     }
 
-    await this.indexEvents('ShardEngravedEvent', async (event) => {
-      const { subject, construct_id, shard_id, timestamp, category, is_encrypted, content_snippet } = event.parsedJson as any;
-      
-      const shard = new MemoryShard();
-      shard.constructId = construct_id;
-      shard.shard_index = Number(shard_id);
-      shard.timestamp = timestamp;
-      shard.content = content_snippet;
-      shard.emotion_val = 0;
-      shard.category = category;
-      shard.is_encrypted = is_encrypted;
-      shard.tx_digest = event.id.txDigest;
-      
-      let construct = await this.constructRepo.findOne({ where: { id: construct_id } });
-      if (!construct) {
-        construct = new Construct();
-        construct.id = construct_id;
-        construct.owner = subject;
-        await this.constructRepo.save(construct);
-      }
-
-      const existing = await this.shardRepo.findOne({ where: { tx_digest: event.id.txDigest } });
-      if (!existing) {
-        await this.shardRepo.save(shard);
-        this.logger.log(`Indexed Shard ${shard_id} for Construct ${construct_id}`);
-      }
-    });
-
-    await this.indexEvents('SubjectJackedInEvent', async (event) => {
-      const { subject, construct_id, timestamp } = event.parsedJson as any;
-      
-      let construct = await this.constructRepo.findOne({ where: { id: construct_id } });
-      if (!construct) {
-        construct = new Construct();
-        construct.id = construct_id;
-        construct.owner = subject;
-        construct.last_update = timestamp;
-        await this.constructRepo.save(construct);
-        this.logger.log(`Indexed New Construct ${construct_id} for ${subject}`);
-      }
-    });
+    for (const processor of this.processors) {
+      await this.indexEvents(processor);
+    }
   }
 
-  private async indexEvents(eventType: string, handler: (event: any) => Promise<void>) {
+  private async indexEvents(processor: EventProcessor) {
+    const eventType = processor.getEventType();
     const fullType = `${this.packageId}::core::${eventType}`;
     
     let cursor = await this.cursorRepo.findOne({ where: { event_type: fullType } });
@@ -100,7 +65,7 @@ export class IndexerService implements OnModuleInit {
       });
 
       for (const event of events.data) {
-        await handler(event);
+        await processor.process(event);
       }
 
       if (events.hasNextPage && events.nextCursor) {

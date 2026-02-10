@@ -14,6 +14,9 @@ const construct_entity_1 = require("../entities/construct.entity");
 const memory_shard_entity_1 = require("../entities/memory-shard.entity");
 const neural_badge_entity_1 = require("../entities/neural-badge.entity");
 const event_cursor_entity_1 = require("../entities/event-cursor.entity");
+const construct_service_1 = require("../services/construct.service");
+const shard_engraved_processor_1 = require("./processors/shard-engraved.processor");
+const subject_jacked_in_processor_1 = require("./processors/subject-jacked-in.processor");
 let IndexerModule = class IndexerModule {
 };
 exports.IndexerModule = IndexerModule;
@@ -22,7 +25,12 @@ exports.IndexerModule = IndexerModule = __decorate([
         imports: [
             typeorm_1.TypeOrmModule.forFeature([construct_entity_1.Construct, memory_shard_entity_1.MemoryShard, neural_badge_entity_1.NeuralBadge, event_cursor_entity_1.EventCursor]),
         ],
-        providers: [indexer_service_1.IndexerService],
+        providers: [
+            indexer_service_1.IndexerService,
+            construct_service_1.ConstructService,
+            shard_engraved_processor_1.ShardEngravedProcessor,
+            subject_jacked_in_processor_1.SubjectJackedInProcessor,
+        ],
     })
 ], IndexerModule);
 //# sourceMappingURL=indexer.module.js.map

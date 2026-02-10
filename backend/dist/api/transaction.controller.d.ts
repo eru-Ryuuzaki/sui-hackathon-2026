@@ -1,13 +1,5 @@
 import { SuiService } from '../sui/sui.service';
-declare class EngraveDto {
-    sender: string;
-    construct_id: string;
-    content: string;
-    emotion_val: number;
-    category: number;
-    is_encrypted: boolean;
-    blob_id?: string;
-}
+import { EngraveDto } from '../dto/engrave.dto';
 export declare class TransactionController {
     private suiService;
     private readonly logger;
@@ -16,4 +8,3 @@ export declare class TransactionController {
         tx_bytes: string;
     }>;
 }
-export {};

@@ -1,8 +1,7 @@
-import { Repository } from 'typeorm';
-import { MemoryShard } from '../entities/memory-shard.entity';
+import { MemoryService } from '../services/memory.service';
 export declare class MemoryController {
-    private shardRepo;
-    constructor(shardRepo: Repository<MemoryShard>);
-    search(query: string): Promise<MemoryShard[]>;
-    getMemories(constructId: string): Promise<MemoryShard[]>;
+    private memoryService;
+    constructor(memoryService: MemoryService);
+    search(query: string): Promise<import("../entities/memory-shard.entity").MemoryShard[]>;
+    getMemories(constructId: string): Promise<import("../entities/memory-shard.entity").MemoryShard[]>;
 }

@@ -1,40 +1,7 @@
 import { Controller, Post, Body, Logger } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiProperty } from '@nestjs/swagger';
-import { TransactionBlock } from '@mysten/sui.js/transactions';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { SuiService } from '../sui/sui.service';
-import { IsString, IsNumber, IsBoolean, IsOptional, MaxLength } from 'class-validator';
-
-class EngraveDto {
-  @ApiProperty()
-  @IsString()
-  sender: string;
-
-  @ApiProperty()
-  @IsString()
-  construct_id: string;
-
-  @ApiProperty()
-  @IsString()
-  @MaxLength(1000)
-  content: string;
-
-  @ApiProperty()
-  @IsNumber()
-  emotion_val: number;
-
-  @ApiProperty()
-  @IsNumber()
-  category: number;
-
-  @ApiProperty()
-  @IsBoolean()
-  is_encrypted: boolean;
-
-  @ApiProperty()
-  @IsOptional()
-  @IsString()
-  blob_id?: string;
-}
+import { EngraveDto } from '../dto/engrave.dto';
 
 @ApiTags('Transaction')
 @Controller('api/transaction')
@@ -46,37 +13,9 @@ export class TransactionController {
   @Post('engrave')
   @ApiOperation({ summary: 'Build engrave transaction' })
   async buildEngraveTx(@Body() dto: EngraveDto) {
-    const tx = new TransactionBlock();
-    tx.setSender(dto.sender);
-
-    const packageId = this.suiService.getPackageId();
-    
-    // Arguments: construct, hive, clock, content, emotion, category, is_encrypted, blob_id
-    // Need to get Hive Object ID. Assuming it's a known constant or env var.
-    const hiveId = process.env.HIVE_OBJECT_ID; 
-
-    if (!hiveId || !packageId) {
-        throw new Error("Configuration missing");
-    }
-
-    tx.moveCall({
-      target: `${packageId}::core::engrave`,
-      arguments: [
-        tx.object(dto.construct_id),
-        tx.object(hiveId),
-        tx.object('0x6'), // Clock
-        tx.pure(dto.content),
-        tx.pure(dto.emotion_val),
-        tx.pure(dto.category),
-        tx.pure(dto.is_encrypted),
-        tx.pure(dto.blob_id ? [dto.blob_id] : []),
-      ],
-    });
-
-    // Serialize
-    const txBytes = await tx.build({ client: this.suiService.getClient() });
+    const txBytes = await this.suiService.buildEngraveTransaction(dto);
     return {
-      tx_bytes: Buffer.from(txBytes).toString('base64'),
+      tx_bytes: txBytes,
     };
   }
 }

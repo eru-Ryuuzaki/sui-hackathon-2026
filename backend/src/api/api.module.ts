@@ -9,6 +9,7 @@ import { ZkLoginController } from './zklogin.controller';
 import { Construct } from '../entities/construct.entity';
 import { MemoryShard } from '../entities/memory-shard.entity';
 import { NeuralBadge } from '../entities/neural-badge.entity';
+import { MemoryService } from '../services/memory.service';
 
 @Module({
   imports: [
@@ -21,6 +22,9 @@ import { NeuralBadge } from '../entities/neural-badge.entity';
     ConstructController,
     TransactionController,
     ZkLoginController,
+  ],
+  providers: [
+    MemoryService,
   ],
 })
 export class ApiModule {}

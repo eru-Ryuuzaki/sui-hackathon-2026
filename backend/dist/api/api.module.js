@@ -18,6 +18,7 @@ const zklogin_controller_1 = require("./zklogin.controller");
 const construct_entity_1 = require("../entities/construct.entity");
 const memory_shard_entity_1 = require("../entities/memory-shard.entity");
 const neural_badge_entity_1 = require("../entities/neural-badge.entity");
+const memory_service_1 = require("../services/memory.service");
 let ApiModule = class ApiModule {
 };
 exports.ApiModule = ApiModule;
@@ -33,6 +34,9 @@ exports.ApiModule = ApiModule = __decorate([
             construct_controller_1.ConstructController,
             transaction_controller_1.TransactionController,
             zklogin_controller_1.ZkLoginController,
+        ],
+        providers: [
+            memory_service_1.MemoryService,
         ],
     })
 ], ApiModule);

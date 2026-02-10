@@ -16,55 +16,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TransactionController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const transactions_1 = require("@mysten/sui.js/transactions");
 const sui_service_1 = require("../sui/sui.service");
-const class_validator_1 = require("class-validator");
-class EngraveDto {
-    sender;
-    construct_id;
-    content;
-    emotion_val;
-    category;
-    is_encrypted;
-    blob_id;
-}
-__decorate([
-    (0, swagger_1.ApiProperty)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], EngraveDto.prototype, "sender", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], EngraveDto.prototype, "construct_id", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)(),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MaxLength)(1000),
-    __metadata("design:type", String)
-], EngraveDto.prototype, "content", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)(),
-    (0, class_validator_1.IsNumber)(),
-    __metadata("design:type", Number)
-], EngraveDto.prototype, "emotion_val", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)(),
-    (0, class_validator_1.IsNumber)(),
-    __metadata("design:type", Number)
-], EngraveDto.prototype, "category", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)(),
-    (0, class_validator_1.IsBoolean)(),
-    __metadata("design:type", Boolean)
-], EngraveDto.prototype, "is_encrypted", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)(),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], EngraveDto.prototype, "blob_id", void 0);
+const engrave_dto_1 = require("../dto/engrave.dto");
 let TransactionController = TransactionController_1 = class TransactionController {
     suiService;
     logger = new common_1.Logger(TransactionController_1.name);
@@ -72,29 +25,9 @@ let TransactionController = TransactionController_1 = class TransactionControlle
         this.suiService = suiService;
     }
     async buildEngraveTx(dto) {
-        const tx = new transactions_1.TransactionBlock();
-        tx.setSender(dto.sender);
-        const packageId = this.suiService.getPackageId();
-        const hiveId = process.env.HIVE_OBJECT_ID;
-        if (!hiveId || !packageId) {
-            throw new Error("Configuration missing");
-        }
-        tx.moveCall({
-            target: `${packageId}::core::engrave`,
-            arguments: [
-                tx.object(dto.construct_id),
-                tx.object(hiveId),
-                tx.object('0x6'),
-                tx.pure(dto.content),
-                tx.pure(dto.emotion_val),
-                tx.pure(dto.category),
-                tx.pure(dto.is_encrypted),
-                tx.pure(dto.blob_id ? [dto.blob_id] : []),
-            ],
-        });
-        const txBytes = await tx.build({ client: this.suiService.getClient() });
+        const txBytes = await this.suiService.buildEngraveTransaction(dto);
         return {
-            tx_bytes: Buffer.from(txBytes).toString('base64'),
+            tx_bytes: txBytes,
         };
     }
 };
@@ -104,7 +37,7 @@ __decorate([
     (0, swagger_1.ApiOperation)({ summary: 'Build engrave transaction' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [EngraveDto]),
+    __metadata("design:paramtypes", [engrave_dto_1.EngraveDto]),
     __metadata("design:returntype", Promise)
 ], TransactionController.prototype, "buildEngraveTx", null);
 exports.TransactionController = TransactionController = TransactionController_1 = __decorate([

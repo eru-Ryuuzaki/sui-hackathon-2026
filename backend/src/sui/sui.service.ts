@@ -4,6 +4,7 @@ import { SuiClient, getFullnodeUrl } from '@mysten/sui.js/client';
 import { Ed25519Keypair } from '@mysten/sui.js/keypairs/ed25519';
 import { TransactionBlock } from '@mysten/sui.js/transactions';
 import { fromB64 } from '@mysten/sui.js/utils';
+import { EngraveDto } from '../dto/engrave.dto';
 
 @Injectable()
 export class SuiService implements OnModuleInit {
@@ -56,5 +57,34 @@ export class SuiService implements OnModuleInit {
 
   getPackageId(): string {
     return this.configService.get<string>('SUI_PACKAGE_ID', '');
+  }
+
+  async buildEngraveTransaction(dto: EngraveDto): Promise<string> {
+    const tx = new TransactionBlock();
+    tx.setSender(dto.sender);
+
+    const packageId = this.getPackageId();
+    const hiveId = this.configService.get<string>('HIVE_OBJECT_ID');
+
+    if (!hiveId || !packageId) {
+        throw new Error("Configuration missing: HIVE_OBJECT_ID or SUI_PACKAGE_ID");
+    }
+
+    tx.moveCall({
+      target: `${packageId}::core::engrave`,
+      arguments: [
+        tx.object(dto.construct_id),
+        tx.object(hiveId),
+        tx.object('0x6'), // Clock
+        tx.pure(dto.content),
+        tx.pure(dto.emotion_val),
+        tx.pure(dto.category),
+        tx.pure(dto.is_encrypted),
+        tx.pure(dto.blob_id ? [dto.blob_id] : []),
+      ],
+    });
+
+    const txBytes = await tx.build({ client: this.client });
+    return Buffer.from(txBytes).toString('base64');
   }
 }

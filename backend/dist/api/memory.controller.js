@@ -15,29 +15,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MemoryController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const typeorm_1 = require("@nestjs/typeorm");
-const typeorm_2 = require("typeorm");
-const memory_shard_entity_1 = require("../entities/memory-shard.entity");
+const memory_service_1 = require("../services/memory.service");
 let MemoryController = class MemoryController {
-    shardRepo;
-    constructor(shardRepo) {
-        this.shardRepo = shardRepo;
+    memoryService;
+    constructor(memoryService) {
+        this.memoryService = memoryService;
     }
     async search(query) {
-        return this.shardRepo.createQueryBuilder('shard')
-            .leftJoinAndSelect('shard.construct', 'construct')
-            .where("to_tsvector('english', shard.content) @@ plainto_tsquery('english', :query)", { query })
-            .andWhere('shard.is_encrypted = :encrypted', { encrypted: false })
-            .orderBy('shard.timestamp', 'DESC')
-            .take(20)
-            .getMany();
+        return this.memoryService.search(query);
     }
     async getMemories(constructId) {
-        return this.shardRepo.find({
-            where: { constructId },
-            order: { timestamp: 'DESC' },
-            take: 50,
-        });
+        return this.memoryService.findByConstructId(constructId);
     }
 };
 exports.MemoryController = MemoryController;
@@ -61,7 +49,6 @@ __decorate([
 exports.MemoryController = MemoryController = __decorate([
     (0, swagger_1.ApiTags)('Memory'),
     (0, common_1.Controller)('api/memory'),
-    __param(0, (0, typeorm_1.InjectRepository)(memory_shard_entity_1.MemoryShard)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __metadata("design:paramtypes", [memory_service_1.MemoryService])
 ], MemoryController);
 //# sourceMappingURL=memory.controller.js.map
