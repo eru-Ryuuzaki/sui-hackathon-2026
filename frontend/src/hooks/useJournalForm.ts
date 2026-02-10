@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { format, isAfter } from 'date-fns';
-import { LogTemplateCategory, LogTemplateItem, LOG_TEMPLATES, getTypesForCategory, getTemplates } from '@/data/logTemplates';
-import { Attachment } from '@/components/ui/AttachmentUploader';
+import { type LogTemplateCategory, type LogTemplateItem, LOG_TEMPLATES, getTypesForCategory, getTemplates } from '@/data/logTemplates';
+import type { Attachment } from '@/components/ui/AttachmentUploader';
 
 export function useJournalForm() {
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));

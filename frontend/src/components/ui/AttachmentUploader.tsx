@@ -3,7 +3,7 @@ import { useSignPersonalMessage } from '@mysten/dapp-kit';
 import { WalrusService } from '@/services/walrus';
 import { deriveKeyFromSignature, encryptFile, arrayBufferToBase64 } from '@/utils/encryption';
 import { useEncryptionStore } from '@/hooks/useEncryptionStore';
-import { Upload, File as FileIcon, X, Lock, Globe, Loader2 } from 'lucide-react';
+import { Upload, File as FileIcon, X, Lock, Loader2 } from 'lucide-react';
 import { triggerAlert } from '@/components/ui/SystemAlert';
 import { cn } from '@/utils/cn';
 

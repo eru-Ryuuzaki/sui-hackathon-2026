@@ -20,15 +20,21 @@ export interface MemoryLog {
     weather?: string;
     mood?: string;
     lifeFrame?: number;
+    sentiment?: number; // Added sentiment/energy
     icon?: string;
     attachments?: LogAttachmentData[]; // Added attachments
+    date?: string;
+    time?: string;
+    isEncrypted?: boolean;
   };
   hash: string; // Simulated tx hash
 }
 
 interface MemoryStore {
   logs: MemoryLog[];
-  addLog: (log: Omit<MemoryLog, "id" | "timestamp" | "hash">) => void;
+  addLog: (
+    log: Omit<MemoryLog, "id" | "timestamp" | "hash"> & { hash?: string },
+  ) => void;
   clearLogs: () => void;
 }
 
@@ -63,7 +69,9 @@ export const useMemoryStore = create<MemoryStore>()(
             ...newLog,
             id: Math.random().toString(36).substring(2, 9),
             timestamp: Date.now(),
-            hash: `0x${Math.random().toString(16).slice(2, 10)}${Math.random().toString(16).slice(2, 10)}`,
+            hash:
+              newLog.hash ||
+              `0x${Math.random().toString(16).slice(2, 10)}${Math.random().toString(16).slice(2, 10)}`,
           };
           // Add to beginning of array (newest first)
           return { logs: [log, ...state.logs] };

@@ -13,7 +13,7 @@ export function HiveMind() {
     date: new Date(log.timestamp),
     content: log.content || '',
     type: log.type,
-    emotionVal: log.metadata?.energy || 50,
+    emotionVal: log.metadata?.sentiment || 50,
     icon: log.metadata?.mood // Use mood as icon if available
   }));
 

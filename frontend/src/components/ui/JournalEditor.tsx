@@ -58,8 +58,7 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
         handleTemplateSelect,
         handleBodyChange,
         handleIconChange,
-        validateDate,
-        resetForm
+        validateDate
     }
   } = useJournalForm();
 
@@ -124,8 +123,8 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
                             content,
                             category,
                             type: type as any,
-                            metadata: { weather, mood, icon, attachments: validAttachments },
-                            hash: result.digest // Use real digest
+                            metadata: { weather, mood, icon, attachments: validAttachments, sentiment: 50 }, // Added sentiment placeholder
+                            hash: result.digest
                         });
                         onExit();
                     },
@@ -142,7 +141,7 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
                             content,
                             category,
                             type: type as any,
-                            metadata: { weather, mood, icon, attachments: validAttachments }
+                            metadata: { weather, mood, icon, attachments: validAttachments, sentiment: 50 } // Added sentiment placeholder
                         });
                         onExit();
                     }
@@ -164,7 +163,7 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
             content,
             category,
             type: type as any,
-            metadata: { weather, mood, icon, attachments: validAttachments }
+            metadata: { weather, mood, icon, attachments: validAttachments, sentiment: 50 }
         });
         onExit();
     }
