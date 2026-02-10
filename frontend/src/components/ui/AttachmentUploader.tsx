@@ -21,13 +21,14 @@ export interface Attachment {
 interface AttachmentUploaderProps {
   attachments: Attachment[];
   onAttachmentsChange: (attachments: Attachment[]) => void;
+  isEncryptedGlobal: boolean; // Add global prop
 }
 
-export function AttachmentUploader({ attachments, onAttachmentsChange }: AttachmentUploaderProps) {
+export function AttachmentUploader({ attachments, onAttachmentsChange, isEncryptedGlobal }: AttachmentUploaderProps) {
   const { mutateAsync: signMessage } = useSignPersonalMessage();
   const { sessionKey, setSessionKey } = useEncryptionStore();
   
-  const [isEncrypted, setIsEncrypted] = useState(true);
+  // Removed local isEncrypted state to rely on global prop
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -59,6 +60,16 @@ export function AttachmentUploader({ attachments, onAttachmentsChange }: Attachm
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
+    // Warning for PUBLIC upload
+    if (!isEncryptedGlobal) {
+       triggerAlert({
+         type: 'warning',
+         title: 'PUBLIC UPLOAD DETECTED',
+         message: 'Files will be publicly accessible on Walrus. Anyone with the Blob ID can view them.',
+         duration: 5000
+       });
+    }
+
     const newAttachments: Attachment[] = [];
 
     Array.from(files).forEach(file => {
@@ -71,7 +82,7 @@ export function AttachmentUploader({ attachments, onAttachmentsChange }: Attachm
         id: Math.random().toString(36).substring(7),
         file,
         previewUrl: URL.createObjectURL(file),
-        isEncrypted, // Use current toggle state
+        isEncrypted: isEncryptedGlobal, // Use global prop
         type,
         status: 'pending'
       });
@@ -133,25 +144,10 @@ export function AttachmentUploader({ attachments, onAttachmentsChange }: Attachm
   };
 
   return (
-    <div className="mt-4 space-y-3">
+    <div className="space-y-3">
       {/* Toolbar / Dropzone */}
       <div className="flex items-center justify-between mb-2">
          <div className="text-xs text-titanium-grey font-mono">MEMORY ARTIFACTS (WALRUS BLOB)</div>
-         
-         {/* Encryption Toggle */}
-         <button 
-           onClick={() => setIsEncrypted(!isEncrypted)}
-           className={cn(
-             "flex items-center gap-2 px-3 py-1 text-[10px] font-bold tracking-wider border transition-all duration-300",
-             isEncrypted 
-               ? "border-matrix-green text-matrix-green bg-matrix-green/10" 
-               : "border-titanium-grey text-titanium-grey hover:text-white"
-           )}
-           title={isEncrypted ? "Files will be encrypted with your signature" : "Files will be public"}
-         >
-           {isEncrypted ? <Lock size={10} /> : <Globe size={10} />}
-           {isEncrypted ? "ENCRYPTED" : "PUBLIC"}
-         </button>
       </div>
 
       <div 
@@ -185,7 +181,7 @@ export function AttachmentUploader({ attachments, onAttachmentsChange }: Attachm
       </div>
 
       {/* Attachment List */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         {attachments.map(att => (
           <div key={att.id} className="relative group border border-titanium-grey/30 bg-black/40 rounded overflow-hidden flex items-center gap-3 p-2">
              {/* Thumbnail / Icon */}
@@ -217,6 +213,7 @@ export function AttachmentUploader({ attachments, onAttachmentsChange }: Attachm
              <button 
                onClick={(e) => { e.stopPropagation(); removeAttachment(att.id); }}
                className="text-titanium-grey hover:text-glitch-red p-1"
+               title="Remove"
              >
                <X size={12} />
              </button>

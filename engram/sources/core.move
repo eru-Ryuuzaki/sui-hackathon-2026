@@ -51,7 +51,6 @@ module engram::core {
 
     /// Embedded struct for metrics
     public struct Metrics has store, drop, copy {
-        energy: u64,        
         focus: u8,          
         resilience: u8,     
         last_update: u64,   
@@ -134,7 +133,6 @@ module engram::core {
         let sender = tx_context::sender(ctx);
         
         let metrics = Metrics {
-            energy: 100,
             focus: 50,
             resilience: 50,
             last_update: clock::timestamp_ms(clock),
@@ -188,8 +186,7 @@ module engram::core {
         
         // Validation
         assert!(string::length(&content) <= MAX_SHARD_LENGTH, ELengthExceeded);
-        // assert!(construct.vital_metrics.energy >= ENERGY_COST_PER_SHARD, EInsufficientEnergy);
-
+        
         // Mint Shard
         let timestamp = clock::timestamp_ms(clock);
         let shard = MemoryShard {
@@ -222,7 +219,6 @@ module engram::core {
         // Update Construct State
         construct.shard_count = construct.shard_count + 1;
         construct.exp = construct.exp + BASE_EXP_REWARD;
-        construct.vital_metrics.energy = construct.vital_metrics.energy - ENERGY_COST_PER_SHARD;
         construct.vital_metrics.last_update = timestamp;
 
         // Update Global Hive State

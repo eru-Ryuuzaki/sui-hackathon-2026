@@ -17,7 +17,6 @@ export interface MemoryLog {
   category: string;
   type: "INFO" | "WARN" | "ERROR" | "SUCCESS";
   metadata?: {
-    energy?: number;
     weather?: string;
     mood?: string;
     lifeFrame?: number;
