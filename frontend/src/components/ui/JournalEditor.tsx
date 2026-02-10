@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { useJournalForm } from '@/hooks/useJournalForm';
-import { triggerAlert } from '@/components/ui/SystemAlert';
-import { LOG_TEMPLATES, CATEGORY_COLORS, type LogTemplateCategory } from '@/data/logTemplates';
+import { CATEGORY_COLORS, LOG_TEMPLATES, type LogTemplateCategory } from '@/data/logTemplates';
 import { AttachmentUploader } from '@/components/ui/AttachmentUploader';
 import { buildEngraveTx } from '@/utils/sui/transactions';
 import { 
@@ -58,13 +57,11 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
         type, setType,
         isEncrypted, setIsEncrypted,
         selectedTemplate, 
-        isCustomMessage,
         body, 
         icon, 
         weather, setWeather,
         mood, setMood,
         attachments, setAttachments,
-        showIconPicker, setShowIconPicker,
     },
     refs: { dateInputRef, timeInputRef },
     derived: { availableTypes, availableTemplates },
@@ -159,6 +156,17 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
     // Display Body logic same as preview
     const finalContent = body || selectedTemplate?.msg || '';
 
+    const validAttachments = attachments
+    .filter(a => a.status === 'uploaded' && a.blobId)
+    .map(a => ({
+        blobId: a.blobId!,
+        name: a.file.name,
+        type: a.file.type,
+        size: a.file.size,
+        isEncrypted: a.isEncrypted,
+        encryptionIv: a.encryptionIv
+    }));
+
     // Optimistic Update (Local State)
     addLog({
         content: finalContent,
@@ -170,11 +178,15 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
             icon,
             isEncrypted,
             mood,
-            attachments
+            attachments: validAttachments
         }
     });
 
     try {
+        if (!constructId) {
+             throw new Error("Construct ID is missing");
+        }
+
         // Construct Transaction
         // Current limitation: Move contract only accepts ONE blob_id and ONE media_type
         // We take the first attachment if available.

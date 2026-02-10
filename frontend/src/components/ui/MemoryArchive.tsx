@@ -2,7 +2,7 @@ import { format } from 'date-fns';
 import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { CATEGORY_COLORS, type LogTemplateCategory } from '@/data/logTemplates';
 import { cn } from '@/utils/cn';
-import { Terminal as TerminalIcon, XCircle, List, Search } from 'lucide-react';
+import { XCircle, List, Search } from 'lucide-react';
 import { useState } from 'react';
 
 interface MemoryArchiveProps {
