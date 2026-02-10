@@ -1,5 +1,3 @@
-import { type LogTemplateCategory, type LogTemplateItem } from "./logTemplates";
-
 export interface LogTemplateItem {
   type: string;
   icon: string;

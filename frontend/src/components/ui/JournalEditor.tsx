@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { useJournalForm } from '@/hooks/useJournalForm';
