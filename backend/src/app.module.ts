@@ -31,16 +31,28 @@ import { ApiModule } from './api/api.module';
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get<string>('POSTGRES_HOST', 'localhost'),
-        port: configService.get<number>('POSTGRES_PORT', 5432),
-        username: configService.get<string>('POSTGRES_USER', 'engram'),
-        password: configService.get<string>('POSTGRES_PASSWORD', 'engram_password'),
-        database: configService.get<string>('POSTGRES_DB', 'engram_db'),
-        entities: [Construct, MemoryShard, NeuralBadge, EventCursor],
-        synchronize: true, // Auto-create tables (dev only)
-      }),
+      useFactory: (configService: ConfigService) => {
+        const dbConfig = {
+          type: 'postgres' as const,
+          host: configService.get<string>('POSTGRES_HOST', 'localhost'),
+          port: configService.get<number>('POSTGRES_PORT', 5432),
+          username: configService.get<string>('POSTGRES_USER', 'engram'),
+          password: configService.get<string>('POSTGRES_PASSWORD', 'engram_password'),
+          database: configService.get<string>('POSTGRES_DB', 'engram_db'),
+          entities: [Construct, MemoryShard, NeuralBadge, EventCursor],
+          synchronize: true, // Auto-create tables (dev only)
+        };
+        
+        console.log('--- Database Connection Config ---');
+        console.log(`Host: ${dbConfig.host}`);
+        console.log(`Port: ${dbConfig.port}`);
+        console.log(`User: ${dbConfig.username}`);
+        console.log(`Database: ${dbConfig.database}`);
+        console.log(`Password: ${dbConfig.password ? '****** (Set)' : 'NOT SET'}`);
+        console.log('--------------------------------');
+
+        return dbConfig;
+      },
       inject: [ConfigService],
     }),
     ScheduleModule.forRoot(),
