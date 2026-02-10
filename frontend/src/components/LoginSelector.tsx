@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useConnectWallet, useWallets } from '@mysten/dapp-kit';
+import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
+import { generateNonce, generateRandomness } from '@mysten/zklogin';
+import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { GlitchModal } from '@/components/ui/GlitchModal';
 import { Wallet, ScanFace, Lock, ChevronLeft, Download } from 'lucide-react';
 import { triggerAlert } from '@/components/ui/SystemAlert';
@@ -42,7 +45,7 @@ export function LoginSelector({ isOpen, onClose }: LoginSelectorProps) {
     );
   };
 
-  const handleZkLogin = () => {
+  const handleZkLogin = async () => {
     if (!GOOGLE_CLIENT_ID) {
       triggerAlert({
         type: 'warning',
@@ -53,21 +56,51 @@ export function LoginSelector({ isOpen, onClose }: LoginSelectorProps) {
       return;
     }
     setIsRedirecting(true);
-    const bytes = new Uint8Array(16);
-    crypto.getRandomValues(bytes);
-    const nonce = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    sessionStorage.setItem('engram_oauth_nonce', nonce);
-    const params = new URLSearchParams({
-      client_id: GOOGLE_CLIENT_ID,
-      response_type: 'id_token',
-      redirect_uri: REDIRECT_URI,
-      scope: 'openid email profile',
-      state: 'engram_login_state',
-      prompt: 'select_account',
-      nonce,
-    });
-    const loginUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-    window.location.href = loginUrl;
+
+    try {
+      // 1. Prepare zkLogin parameters
+      const client = new SuiJsonRpcClient({ 
+        url: getJsonRpcFullnodeUrl('testnet'),
+        network: 'testnet' as any
+      });
+      const { epoch } = await client.getLatestSuiSystemState();
+      const maxEpoch = Number(epoch) + 2; // Valid for ~2 epochs (approx 48h)
+      
+      const ephemeralKeyPair = new Ed25519Keypair();
+      const randomness = generateRandomness();
+      const nonce = generateNonce(
+        ephemeralKeyPair.getPublicKey(), 
+        maxEpoch, 
+        randomness
+      );
+
+      // 2. Store session data for callback verification & transaction signing
+      sessionStorage.setItem('engram_oauth_nonce', nonce);
+      sessionStorage.setItem('engram_zk_ephemeral_key', ephemeralKeyPair.getSecretKey());
+      sessionStorage.setItem('engram_zk_max_epoch', String(maxEpoch));
+      sessionStorage.setItem('engram_zk_randomness', randomness);
+
+      // 3. Redirect to Google
+      const params = new URLSearchParams({
+        client_id: GOOGLE_CLIENT_ID,
+        response_type: 'id_token',
+        redirect_uri: REDIRECT_URI,
+        scope: 'openid email profile',
+        state: 'engram_login_state',
+        prompt: 'select_account',
+        nonce,
+      });
+      const loginUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+      window.location.href = loginUrl;
+    } catch (error) {
+      console.error("zkLogin init failed:", error);
+      setIsRedirecting(false);
+      triggerAlert({
+        type: 'error',
+        title: 'INIT FAILURE',
+        message: 'Could not initialize Zero-Knowledge parameters.',
+      });
+    }
   };
 
   const renderWalletList = () => (

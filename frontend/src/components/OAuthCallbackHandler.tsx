@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { jwtDecode } from 'jwt-decode'
 import { jwtToAddress } from '@mysten/zklogin'
 import { api } from '@/services/api'
@@ -6,15 +6,27 @@ import { useUserStore } from '@/hooks/useUserStore'
 import { triggerAlert } from '@/components/ui/SystemAlert'
 
 export function OAuthCallbackHandler() {
+  const processedRef = useRef(false);
+
   useEffect(() => {
+    if (processedRef.current) return;
+
     if (window.location.pathname !== '/auth/callback') return
     const fromHash = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('id_token')
     const fromSearch = new URLSearchParams(window.location.search).get('id_token')
     const idToken = fromHash || fromSearch
     if (!idToken) {
-      triggerAlert({ type: 'error', title: 'OAUTH ERROR', message: 'Missing id_token' })
+      // Don't mark as processed here, maybe the user navigated here by mistake and will refresh? 
+      // Or actually, if it's missing, it's an error. But to be safe against double-invocations in strict mode:
+      if (!processedRef.current) {
+         triggerAlert({ type: 'error', title: 'OAUTH ERROR', message: 'Missing id_token' })
+         processedRef.current = true;
+      }
       return
     }
+
+    processedRef.current = true;
+
     ;(async () => {
       const decoded: any = jwtDecode(idToken)
       const expectedNonce = sessionStorage.getItem('engram_oauth_nonce')
