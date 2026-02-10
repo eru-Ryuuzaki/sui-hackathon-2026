@@ -121,35 +121,34 @@
 
 ```move
 module engram::core {
-    use std::string::{String};
-    use std::option::{Option};
     use sui::object::{Self, UID};
+    use std::string::{String};
+    use std::option::{Self, Option};
 
     /// 核心构造体：用户的链上灵魂
-    /// [Update]: 改为 Shared Object 以支持逃生舱机制
-    struct Construct has key, store {
+    struct Construct has key { // 注意：没有 store，灵魂绑定
         id: UID,
-        owner: address,           // 实际控制人
-        backup_controller: Option<address>, // 逃生舱：备用控制人
         level: u64,
         exp: u64,
         vital_metrics: Metrics,
-        shard_count: u64,
+        shard_count: u64, // 用于生成下一个 Shard 的 Key
+        total_gas_burned: u64, // 累计消耗 Gas (统计用)
+        is_granted: bool,      // 是否已领取新手礼包
     }
 
-    /// 记忆碎片
+    /// 记忆碎片：存储在动态字段中的内容
     struct MemoryShard has store, drop, copy {
         timestamp: u64,
-        content: String,
-        emotion_val: i8,
-        category: u8,
-        is_encrypted: bool, // [Update] 隐私开关
+        category: u8, // 0:System, 1:Protocol, 2:Achievement, 3:Challenge, 4:Dream
+        mood: u8,     // 0-5 情绪状态 (配合 UI 颜色编码)
+        content: String, // 纯文本内容 (包含 Type 图标)
         blob_id: Option<String>, // Walrus Blob ID (可选)
         media_type: Option<String>, // e.g. "image/png"
+        is_encrypted: bool, // 隐私开关
     }
 
-    /// 神经徽章
-    struct NeuralBadge has key, store {
+    /// 神经徽章：成就 NFT
+    struct NeuralBadge has key {
         id: UID,
         name: String,
         description: String,

@@ -5,7 +5,25 @@ export interface LogTemplateItem {
   key?: string;
 }
 
-export type LogTemplateCategory = 'system' | 'life_event' | 'daily_task' | 'challenge' | 'environment' | 'dream';
+export type LogTemplateCategory = 'system' | 'protocol' | 'achievement' | 'challenge' | 'dream';
+
+// Map Categories to u8 for On-Chain Storage
+export const CATEGORY_MAP: Record<LogTemplateCategory, number> = {
+  system: 0,
+  protocol: 1,
+  achievement: 2,
+  challenge: 3,
+  dream: 4
+};
+
+// UI Colors for Categories (Neon Cyberpunk Theme)
+export const CATEGORY_COLORS: Record<LogTemplateCategory, string> = {
+  system: '#00f3ff',     // Cyan
+  protocol: '#ffffff',   // White
+  achievement: '#ffd700',// Gold
+  challenge: '#ff2a6d',  // Neon Red
+  dream: '#bd00ff',      // Neon Purple
+};
 
 export const LOG_TEMPLATES: Record<LogTemplateCategory, LogTemplateItem[]> = {
   system: [
@@ -16,33 +34,31 @@ export const LOG_TEMPLATES: Record<LogTemplateCategory, LogTemplateItem[]> = {
     { type: 'OPTIMIZED', icon: '🚀', msg: 'Workflow efficiency improved by ' },
     { type: 'WARNING', icon: '⚠️', msg: 'System resource low: ' },
     { type: 'ERROR', icon: '❌', msg: 'Critical error detected in module: ' },
+    // New Web3/Cyberpunk Flavors
+    { type: 'GAS_LEAK', icon: '⛽', msg: 'High energy consumption detected: ' },
+    { type: 'HODL_MODE', icon: '💎', msg: 'Diamond hands protocol engaged for: ' },
+    { type: 'RUG_PULLED', icon: '📉', msg: 'Unexpected resource loss event: ' },
   ],
-  life_event: [
-    { type: 'MILESTONE', icon: '🏆', msg: 'Major milestone achieved: ' },
-    { type: 'PROGRESS', icon: '📈', msg: 'Progress made on project: ' },
-    { type: 'NEW_CHAPTER', icon: '📖', msg: 'Started a new chapter: ' },
-    { type: 'ACHIEVEMENT', icon: '🏅', msg: 'Unlocked achievement: ' },
-    { type: 'SKILL_UP', icon: '🧠', msg: 'Skill proficiency increased: ' },
-    { type: 'TITLE', icon: '🏷️', msg: 'Acquired new title: ' },
-  ],
-  daily_task: [
-    { type: 'COMPLETE', icon: '✅', msg: 'Daily task completed: ' },
-    { type: 'NEW_TASK', icon: '🆕', msg: 'New task assigned: ' },
-    { type: 'SOCIAL', icon: '💬', msg: 'Social interaction logged: ' },
-    { type: 'TRANSACTION', icon: '💳', msg: 'Resource transaction: ' },
+  protocol: [ // Merged daily_task + life_event (Routine)
+    { type: 'ROUTINE', icon: '✅', msg: 'Daily protocol executed: ' },
+    { type: 'TASK', icon: '🆕', msg: 'New directive received: ' },
+    { type: 'SOCIAL', icon: '💬', msg: 'Inter-subject communication logged: ' },
+    { type: 'TRANSACTION', icon: '💳', msg: 'Resource transaction confirmed: ' },
     { type: 'TRAVEL', icon: '🚀', msg: 'Relocated to sector: ' },
-    { type: 'OPTIONAL', icon: '⚪', msg: 'Optional side-quest: ' },
+    { type: 'LEARNING', icon: '🧠', msg: 'Knowledge database updated: ' },
+  ],
+  achievement: [ // Merged life_event (Milestones)
+    { type: 'MILESTONE', icon: '🏆', msg: 'Major milestone reached: ' },
+    { type: 'LEVEL_UP', icon: '🆙', msg: 'Construct level increased. New capabilities: ' },
+    { type: 'TITLE', icon: '🏷️', msg: 'Acquired new designation: ' },
+    { type: 'BADGE', icon: '🏅', msg: 'Neural Badge unlocked: ' },
   ],
   challenge: [
-    { type: 'VICTORY', icon: '✌️', msg: 'Challenge overcome: ' },
-    { type: 'SETBACK', icon: '🥀', msg: 'Temporary setback encountered: ' },
+    { type: 'VICTORY', icon: '✌️', msg: 'Obstacle overcome: ' },
+    { type: 'SETBACK', icon: '🥀', msg: 'Temporary system setback: ' },
     { type: 'CONFLICT', icon: '⚔️', msg: 'Conflict resolution protocol engaged: ' },
-    { type: 'OVERLOAD', icon: '🔥', msg: 'System overload imminent: ' },
-    { type: 'HEALTH', icon: '💊', msg: 'Health status update: ' },
-  ],
-  environment: [
-    { type: 'WEATHER', icon: '🌤️', msg: 'Environmental conditions update: ' },
-    { type: 'EVENT', icon: '🎉', msg: 'Global event participation: ' },
+    { type: 'OVERLOAD', icon: '🔥', msg: 'Mental overload imminent: ' },
+    { type: 'HEALTH', icon: '💊', msg: 'Biological status update: ' },
   ],
   dream: [
     { type: 'REM_CYCLE', icon: '💤', msg: 'REM cycle data logged: ' },

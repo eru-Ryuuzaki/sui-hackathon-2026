@@ -4,7 +4,7 @@ import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { format, differenceInSeconds, isBefore, isAfter } from 'date-fns';
 import { triggerAlert } from '@/components/ui/SystemAlert';
-import { LOG_TEMPLATES, getTypesForCategory, getTemplates, type LogTemplateCategory, type LogTemplateItem } from '@/data/logTemplates';
+import { LOG_TEMPLATES, getTypesForCategory, getTemplates, type LogTemplateCategory, type LogTemplateItem, CATEGORY_COLORS } from '@/data/logTemplates';
 import { AttachmentUploader, type Attachment } from '@/components/ui/AttachmentUploader';
 import { 
   Terminal as TerminalIcon, 
@@ -22,7 +22,7 @@ import {
 // --- Constants ---
 const WEATHER_ICONS = ['☀️', '☁️', '🌧️', '⛈️', '❄️', '🌪️'];
 const MOOD_ICONS = ['😊', '😐', '😔', '😡', '🤯', '😴'];
-const COMMON_EMOJIS = ['💻', '📝', '🏃', '🍔', '🎮', '🎵', '📚', '💊', '💰', '🧹', '🚗', '✈️'];
+const COMMON_EMOJIS = ['💻', '📝', '🏃', '🍔', '🎮', '🎵', '📚', '💊', '💰', '🧹', '🚗', '✈️', '⛽', '💎', '📉']; // Added Web3 emojis
 
 interface JournalEditorProps {
   onExit: () => void;
@@ -63,6 +63,9 @@ export function JournalEditor({ onExit }: JournalEditorProps) {
   // Derived State
   const availableTypes = useMemo(() => getTypesForCategory(category), [category]);
   const availableTemplates = useMemo(() => getTemplates(category, type), [category, type]);
+  
+  // Current Category Color
+  const categoryColor = CATEGORY_COLORS[category];
 
   // --- Effects ---
 
@@ -191,8 +194,14 @@ export function JournalEditor({ onExit }: JournalEditorProps) {
   return (
     <div className="h-full flex flex-col p-4 overflow-hidden font-mono text-xs">
       {/* Header */}
-      <div className="flex justify-between items-center border-b border-titanium-grey/30 pb-2 shrink-0 mb-4">
-        <div className="flex items-center gap-2 text-neon-cyan">
+      <div 
+        className="flex justify-between items-center border-b pb-2 shrink-0 mb-4 transition-colors duration-300"
+        style={{ borderColor: `${categoryColor}50` }} // 50 is hex for ~30% opacity
+      >
+        <div 
+          className="flex items-center gap-2 transition-colors duration-300"
+          style={{ color: categoryColor }}
+        >
           <TerminalIcon size={14} />
           <span className="font-bold tracking-widest">KERNEL TRACE LOGGER</span>
         </div>
@@ -233,7 +242,11 @@ export function JournalEditor({ onExit }: JournalEditorProps) {
                   <select 
                     value={category} 
                     onChange={e => setCategory(e.target.value as LogTemplateCategory)} 
-                    className="w-full bg-void-black border border-titanium-grey/50 px-2 py-1 focus:border-neon-cyan outline-none text-white appearance-none uppercase"
+                    className="w-full bg-void-black border px-2 py-1 outline-none text-white appearance-none uppercase transition-colors duration-300"
+                    style={{ 
+                      borderColor: `${categoryColor}80`,
+                      boxShadow: `0 0 5px ${categoryColor}20` 
+                    }}
                   >
                     {Object.keys(LOG_TEMPLATES).map(c => <option key={c} value={c}>{c.replace('_', ' ')}</option>)}
                   </select>

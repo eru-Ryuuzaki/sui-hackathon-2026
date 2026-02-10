@@ -45,6 +45,8 @@ module engram::core {
         streak: u64,              // [New] Continuous engraving streak (days)
         vital_metrics: Metrics,
         shard_count: u64,
+        total_gas_burned: u64,    // [New] Total gas consumed (statistic)
+        is_granted: bool,         // [New] Has received newbie grant
     }
 
     /// Embedded struct for metrics
@@ -58,11 +60,12 @@ module engram::core {
     /// The Memory Shard (Stored as Dynamic Field)
     public struct MemoryShard has store, drop, copy {
         timestamp: u64,
+        category: u8,       // 0:System, 1:Protocol, 2:Achievement, 3:Challenge, 4:Dream
+        mood: u8,           // 0-5 Mood State
         content: String,
-        emotion_val: u8,    
-        category: u8,
-        is_encrypted: bool, // PRIVACY FEATURE
         blob_id: Option<String>, // WALRUS INTEGRATION
+        media_type: Option<String>, // e.g. "image/png"
+        is_encrypted: bool, // PRIVACY FEATURE
     }
 
     /// Neural Badge (Achievement NFT)
@@ -84,6 +87,7 @@ module engram::core {
         shard_id: u64,
         timestamp: u64,
         category: u8,
+        mood: u8,          // [New]
         is_encrypted: bool,
         has_attachment: bool,
         // We emit the content (or hash) here. 
@@ -148,6 +152,8 @@ module engram::core {
             streak: 0,
             vital_metrics: metrics,
             shard_count: 0,
+            total_gas_burned: 0,
+            is_granted: false,
         };
 
         // Update Global Stats
@@ -169,10 +175,11 @@ module engram::core {
         hive: &mut HiveState,
         clock: &Clock,
         content: String,
-        emotion_val: u8,
+        mood: u8,
         category: u8,
         is_encrypted: bool,
         blob_id: Option<String>,
+        media_type: Option<String>,
         ctx: &mut TxContext
     ) {
         let sender = tx_context::sender(ctx);
@@ -181,17 +188,18 @@ module engram::core {
         
         // Validation
         assert!(string::length(&content) <= MAX_SHARD_LENGTH, ELengthExceeded);
-        assert!(construct.vital_metrics.energy >= ENERGY_COST_PER_SHARD, EInsufficientEnergy);
+        // assert!(construct.vital_metrics.energy >= ENERGY_COST_PER_SHARD, EInsufficientEnergy);
 
         // Mint Shard
         let timestamp = clock::timestamp_ms(clock);
         let shard = MemoryShard {
             timestamp,
-            content: content, 
-            emotion_val,
             category,
-            is_encrypted,
+            mood,
+            content: content, 
             blob_id,
+            media_type,
+            is_encrypted,
         };
 
         // Attach as Dynamic Field
@@ -227,6 +235,7 @@ module engram::core {
             shard_id: construct.shard_count - 1,
             timestamp,
             category,
+            mood,
             is_encrypted,
             has_attachment: option::is_some(&blob_id),
             content_snippet: if (is_encrypted) { string::utf8(b"[ENCRYPTED]") } else { content },
