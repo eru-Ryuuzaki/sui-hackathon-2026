@@ -24,11 +24,21 @@ interface AttachmentUploaderProps {
   isEncryptedGlobal: boolean; // Add global prop
 }
 
+import { GlitchModal } from '@/components/ui/GlitchModal';
+import { Activity, Check } from 'lucide-react';
+
 export function AttachmentUploader({ attachments, onAttachmentsChange, isEncryptedGlobal }: AttachmentUploaderProps) {
   const { mutateAsync: signMessage } = useSignPersonalMessage();
   const { sessionKey, setSessionKey } = useEncryptionStore();
   
-  // Removed local isEncrypted state to rely on global prop
+  // Warning State for Upload
+  const [showUploadWarning, setShowUploadWarning] = useState(() => {
+    return localStorage.getItem('ENGRAM_UPLOAD_WARNING') !== 'false';
+  });
+  const [isUploadWarningOpen, setIsUploadWarningOpen] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<FileList | null>(null);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -60,16 +70,27 @@ export function AttachmentUploader({ attachments, onAttachmentsChange, isEncrypt
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
-    // Warning for PUBLIC upload
-    if (!isEncryptedGlobal) {
-       triggerAlert({
-         type: 'warning',
-         title: 'PUBLIC UPLOAD DETECTED',
-         message: 'Files will be publicly accessible on Walrus. Anyone with the Blob ID can view them.',
-         duration: 5000
-       });
+    if (showUploadWarning) {
+        setPendingFiles(files);
+        setIsUploadWarningOpen(true);
+    } else {
+        processFiles(files);
     }
+  };
 
+  const confirmUpload = () => {
+    if (dontShowAgain) {
+        localStorage.setItem('ENGRAM_UPLOAD_WARNING', 'false');
+        setShowUploadWarning(false);
+    }
+    setIsUploadWarningOpen(false);
+    if (pendingFiles) {
+        processFiles(pendingFiles);
+        setPendingFiles(null);
+    }
+  };
+
+  const processFiles = async (files: FileList) => {
     const newAttachments: Attachment[] = [];
 
     Array.from(files).forEach(file => {
@@ -225,6 +246,89 @@ export function AttachmentUploader({ attachments, onAttachmentsChange, isEncrypt
           </div>
         ))}
       </div>
+
+    {/* Upload Warning Modal */}
+    <GlitchModal
+        isOpen={isUploadWarningOpen}
+        onClose={() => setIsUploadWarningOpen(false)}
+        title="CONFIRM ARTIFACT UPLOAD"
+        className={cn(
+            "max-w-md shadow-[0_0_50px_rgba(0,243,255,0.15)]",
+            isEncryptedGlobal ? "border-neon-cyan/50" : "border-glitch-red/50 shadow-[0_0_50px_rgba(255,0,60,0.15)]"
+        )}
+    >
+        <div className="space-y-4 font-mono">
+             <div className={cn(
+                 "text-xs border-l-2 pl-2 py-1",
+                 isEncryptedGlobal ? "text-titanium-grey border-neon-cyan" : "text-glitch-red border-glitch-red"
+             )}>
+                &gt; WARNING: IMMUTABLE STORAGE ACTION.<br/>
+                &gt; UPLOADED DATA CANNOT BE REVOKED.
+            </div>
+
+            <div className="bg-white/5 border border-titanium-grey/20 p-3 rounded space-y-2 text-[10px]">
+                <div className="flex justify-between">
+                    <span className="text-titanium-grey">TARGET NETWORK:</span>
+                    <span className="text-neon-cyan font-bold">WALRUS (TESTNET)</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-titanium-grey">STORAGE DURATION:</span>
+                    <span className="text-white">1 EPOCH (RENEWABLE)</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-titanium-grey">ENCRYPTION STATUS:</span>
+                    <span className={cn("font-bold", isEncryptedGlobal ? "text-matrix-green" : "text-glitch-red")}>
+                        {isEncryptedGlobal ? "ENABLED (SECURE)" : "DISABLED (PUBLIC)"}
+                    </span>
+                </div>
+                {!isEncryptedGlobal && (
+                    <div className="text-glitch-red text-[9px] mt-1 pt-1 border-t border-titanium-grey/20">
+                        ⚠ PUBLIC MODE: Anyone with the Blob ID can access these files.
+                    </div>
+                )}
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+                <div 
+                    onClick={() => setDontShowAgain(!dontShowAgain)}
+                    className="flex items-center gap-2 cursor-pointer group select-none"
+                >
+                    <div className={cn(
+                        "w-3.5 h-3.5 border flex items-center justify-center transition-all duration-200",
+                        dontShowAgain 
+                            ? "bg-neon-cyan border-neon-cyan shadow-[0_0_5px_rgba(0,243,255,0.5)]" 
+                            : "border-titanium-grey group-hover:border-white bg-transparent"
+                    )}>
+                        {dontShowAgain && <Check size={10} className="text-void-black font-bold" strokeWidth={4} />}
+                    </div>
+                    <span className={cn(
+                        "text-[10px] transition-colors",
+                        dontShowAgain ? "text-neon-cyan" : "text-titanium-grey group-hover:text-white"
+                    )}>
+                        Suppress future warnings (Local Protocol)
+                    </span>
+                </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-4 pt-2 border-t border-titanium-grey/20">
+                <button 
+                    onClick={() => setIsUploadWarningOpen(false)}
+                    className="px-4 py-2 text-titanium-grey hover:text-white transition-colors text-xs"
+                >
+                    [CANCEL]
+                </button>
+                <button 
+                    onClick={confirmUpload}
+                    className={cn(
+                        "px-4 py-2 text-xs font-bold hover:bg-white hover:text-void-black transition-colors flex items-center gap-2",
+                        isEncryptedGlobal ? "bg-neon-cyan text-void-black" : "bg-glitch-red text-white"
+                    )}
+                >
+                    <Activity size={12} /> CONFIRM UPLOAD
+                </button>
+            </div>
+        </div>
+    </GlitchModal>
     </div>
   );
 }

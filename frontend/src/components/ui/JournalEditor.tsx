@@ -44,6 +44,11 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
   const [customMessage, setCustomMessage] = useState('');
 
   const [mode, setMode] = useState<'AUTO' | 'MANUAL'>('AUTO');
+  const [showSubmitWarning, setShowSubmitWarning] = useState(() => {
+    return localStorage.getItem('ENGRAM_SUBMIT_WARNING') !== 'false';
+  });
+  const [isSubmitWarningOpen, setIsSubmitWarningOpen] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
 
   const { 
     formState: {
@@ -129,8 +134,26 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
       if (tmpl) handleTemplateSelect(tmpl);
   };
 
-  // Handle Submit (Write to Blockchain)
-  const handleUpload = async () => {
+  // Handle Submit Confirmation
+  const confirmUpload = async () => {
+    setIsSubmitWarningOpen(false);
+    if (dontShowAgain) {
+      localStorage.setItem('ENGRAM_SUBMIT_WARNING', 'false');
+      setShowSubmitWarning(false);
+    }
+    await executeUpload();
+  };
+
+  const handleUploadClick = () => {
+    if (showSubmitWarning) {
+      setIsSubmitWarningOpen(true);
+    } else {
+      executeUpload();
+    }
+  };
+
+  // Actual Upload Logic (Renamed from handleUpload)
+  const executeUpload = async () => {
     if (!account) return;
     
     // Display Body logic same as preview
@@ -540,7 +563,7 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
             ) : (
               <button 
                 className="bg-neon-cyan text-void-black px-6 py-2 font-bold hover:bg-white transition-colors flex items-center gap-2"
-                onClick={handleUpload}
+                onClick={handleUploadClick}
               >
                 <Save size={14} /> UPLOAD TRACE
               </button>
@@ -548,6 +571,75 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
         </div>
       </div>
     </div>
+
+    {/* Submit Warning Modal */}
+    <GlitchModal
+        isOpen={isSubmitWarningOpen}
+        onClose={() => setIsSubmitWarningOpen(false)}
+        title="CONFIRM NEURAL ENGRAVING"
+        className="max-w-md border-glitch-red/50 shadow-[0_0_50px_rgba(255,0,60,0.15)]"
+    >
+        <div className="space-y-4 font-mono">
+             <div className="text-xs text-titanium-grey border-l-2 border-glitch-red pl-2 py-1">
+                &gt; WARNING: IMMUTABLE ACTION DETECTED.<br/>
+                &gt; PLEASE REVIEW PROTOCOL PARAMETERS.
+            </div>
+
+            <div className="bg-white/5 border border-titanium-grey/20 p-3 rounded space-y-2 text-[10px]">
+                <div className="flex justify-between">
+                    <span className="text-titanium-grey">PRIVACY PROTOCOL:</span>
+                    <span className={cn("font-bold", isEncrypted ? "text-matrix-green" : "text-neon-cyan")}>
+                        {isEncrypted ? "[ENCRYPTED]" : "[PUBLIC CHAIN]"}
+                    </span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-titanium-grey">ATTACHMENTS:</span>
+                    <span className="text-white">
+                        {attachments.length > 0 
+                            ? (attachments.length > 1 ? `1 of ${attachments.length} SELECTED` : "1 SELECTED")
+                            : "NONE"}
+                    </span>
+                </div>
+                {attachments.length > 1 && (
+                    <div className="text-glitch-red text-[9px] mt-1 pt-1 border-t border-titanium-grey/20">
+                        ⚠ SYSTEM LIMIT: Only the first attachment will be linked on-chain.
+                    </div>
+                )}
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+                <div 
+                    onClick={() => setDontShowAgain(!dontShowAgain)}
+                    className="flex items-center gap-2 cursor-pointer group"
+                >
+                    <div className={cn(
+                        "w-3 h-3 border flex items-center justify-center transition-colors",
+                        dontShowAgain ? "bg-neon-cyan border-neon-cyan" : "border-titanium-grey group-hover:border-white"
+                    )}>
+                        {dontShowAgain && <div className="w-1.5 h-1.5 bg-void-black" />}
+                    </div>
+                    <span className="text-[10px] text-titanium-grey group-hover:text-white transition-colors">
+                        Suppress future warnings (Local Protocol)
+                    </span>
+                </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-4 pt-2 border-t border-titanium-grey/20">
+                <button 
+                    onClick={() => setIsSubmitWarningOpen(false)}
+                    className="px-4 py-2 text-titanium-grey hover:text-white transition-colors text-xs"
+                >
+                    [ABORT]
+                </button>
+                <button 
+                    onClick={confirmUpload}
+                    className="bg-glitch-red text-white px-4 py-2 text-xs font-bold hover:bg-white hover:text-void-black transition-colors flex items-center gap-2"
+                >
+                    <Activity size={12} /> ENGRAVE
+                </button>
+            </div>
+        </div>
+    </GlitchModal>
     </>
   );
 }

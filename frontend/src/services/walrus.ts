@@ -31,8 +31,9 @@ export const WalrusService = {
     // URL: /v1/store?epochs=N
     
     try {
+      // Updated Endpoint: /v1/blobs?epochs=N
       const response = await axios.put<WalrusUploadResponse>(
-        `${PUBLISHER_URL}/v1/store?epochs=${epochs}`,
+        `${PUBLISHER_URL}/v1/blobs?epochs=${epochs}`,
         file,
         {
           headers: {
@@ -60,14 +61,14 @@ export const WalrusService = {
    * @param blobId The Walrus Blob ID
    */
   getBlobUrl: (blobId: string): string => {
-    return `${AGGREGATOR_URL}/v1/${blobId}`;
+    return `${AGGREGATOR_URL}/v1/blobs/${blobId}`;
   },
 
   /**
    * Download a Blob directly
    */
   downloadBlob: async (blobId: string): Promise<Blob> => {
-    const response = await axios.get(`${AGGREGATOR_URL}/v1/${blobId}`, {
+    const response = await axios.get(`${AGGREGATOR_URL}/v1/blobs/${blobId}`, {
       responseType: 'blob'
     });
     return response.data;
