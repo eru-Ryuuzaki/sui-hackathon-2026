@@ -1,11 +1,10 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { useUserStore } from '@/hooks/useUserStore';
+import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { useMemoryStore } from '@/hooks/useMemoryStore';
-import { useCurrentAccount } from '@mysten/dapp-kit';
-import { format, isAfter } from 'date-fns';
+import { useJournalForm } from '@/hooks/useJournalForm';
 import { triggerAlert } from '@/components/ui/SystemAlert';
-import { LOG_TEMPLATES, getTypesForCategory, getTemplates, type LogTemplateCategory, type LogTemplateItem, CATEGORY_COLORS } from '@/data/logTemplates';
-import { AttachmentUploader, type Attachment } from '@/components/ui/AttachmentUploader';
+import { LOG_TEMPLATES, CATEGORY_COLORS, type LogTemplateCategory } from '@/data/logTemplates';
+import { AttachmentUploader } from '@/components/ui/AttachmentUploader';
+import { buildEngraveTx } from '@/utils/sui/transactions';
 import { 
   Terminal as TerminalIcon, 
   Activity, 
@@ -30,109 +29,146 @@ const COMMON_EMOJIS = ['💻', '📝', '🏃', '🍔', '🎮', '🎵', '📚', '
 
 interface JournalEditorProps {
   onExit: () => void;
+  constructId?: string; // Passed from parent if available
 }
 
-export function JournalEditor({ onExit }: JournalEditorProps) {
+export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
   const account = useCurrentAccount();
-  const { currentUser } = useUserStore();
-  const { addLog } = useMemoryStore();
+  const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
+  const { addLog } = useMemoryStore(); // Still used for local optimism/fallback
   
-  // Form State
-  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [time, setTime] = useState(format(new Date(), 'HH:mm'));
-  const [category, setCategory] = useState<LogTemplateCategory>('system');
-  const [type, setType] = useState('INFO');
-  
-  // Encryption Toggle (Default True)
-  const [isEncrypted, setIsEncrypted] = useState(true);
+  const { 
+    formState: {
+        date, setDate,
+        time, setTime,
+        category, setCategory,
+        type, setType,
+        isEncrypted, setIsEncrypted,
+        selectedTemplate, 
+        body, 
+        icon, 
+        weather, setWeather,
+        mood, setMood,
+        attachments, setAttachments,
+        showIconPicker, setShowIconPicker,
+    },
+    refs: { dateInputRef },
+    derived: { availableTypes, availableTemplates },
+    handlers: {
+        handleTemplateSelect,
+        handleBodyChange,
+        handleIconChange,
+        validateDate,
+        resetForm
+    }
+  } = useJournalForm();
 
-  // Template & Customization State
-  const [selectedTemplate, setSelectedTemplate] = useState<LogTemplateItem | null>(null);
-  const [isCustomMessage, setIsCustomMessage] = useState(false);
-  const [body, setBody] = useState('');
-  const [icon, setIcon] = useState('📝');
-  
-  const [weather, setWeather] = useState('☀️');
-  const [mood, setMood] = useState('😊');
-  
-  // UI State
-  const [showIconPicker, setShowIconPicker] = useState(false);
-  const [attachments, setAttachments] = useState<Attachment[]>([]); 
-  const dateInputRef = useRef<HTMLInputElement>(null);
-
-  // Derived State
-  const availableTypes = useMemo(() => getTypesForCategory(category), [category]);
-  const availableTemplates = useMemo(() => getTemplates(category, type), [category, type]);
-  
   // Current Category Color
   const categoryColor = CATEGORY_COLORS[category];
-
-  // --- Effects ---
-
-  // 1. Category Change Logic
-  useEffect(() => {
-    const types = getTypesForCategory(category);
-    const newType = types[0] || 'INFO';
-    setType(newType);
-    setSelectedTemplate(null);
-    setIsCustomMessage(false);
-
-    if (category === 'system') {
-      const defaultTemplate = LOG_TEMPLATES.system[0]; 
-      if (defaultTemplate) {
-        setBody(defaultTemplate.msg);
-        setIcon(defaultTemplate.icon);
-      }
-    } else {
-      setBody('');
-      setIcon('📝');
-    }
-  }, [category]);
-
-  // 2. Type Change Logic
-  useEffect(() => {
-    if (category === 'system' && type !== 'INFO' && body === LOG_TEMPLATES.system[0]?.msg && !isCustomMessage) {
-       setBody('');
-       setIcon('📝');
-    }
-    setSelectedTemplate(null);
-  }, [type, category]);
-
-  // --- Handlers ---
-
-  const handleTemplateSelect = (tmpl: LogTemplateItem | 'custom') => {
-    if (tmpl === 'custom') {
-      setSelectedTemplate(null);
-      setIsCustomMessage(true);
-      setBody('');
-    } else {
-      setSelectedTemplate(tmpl);
-      setIsCustomMessage(false);
-      setBody(tmpl.msg);
-      setIcon(tmpl.icon);
-    }
-  };
-
-  const handleBodyChange = (val: string) => {
-    setBody(val);
-    setIsCustomMessage(true);
-  };
-
-  const handleIconChange = (newIcon: string) => {
-    setIcon(newIcon);
-    setShowIconPicker(false);
-  };
-
-  // --- Validation ---
-  const validateDate = (): string | null => {
-    const logDate = new Date(`${date}T${time}`);
-    const now = new Date();
-    if (isAfter(logDate, now)) return "TIME PARADOX: FUTURE EVENTS PROHIBITED";
-    return null;
-  };
-
   const validationError = validateDate();
   const sysTrace = `[${date} ${time}][${category.toUpperCase()}]${type}: ${icon} ${body.slice(0, 30)}${body.length > 30 ? '...' : ''}`;
+
+  const handleUpload = () => {
+    // 1. Process Attachments
+    const validAttachments = attachments
+    .filter(a => a.status === 'uploaded' && a.blobId)
+    .map(a => ({
+        blobId: a.blobId!,
+        name: a.file.name,
+        type: a.file.type,
+        size: a.file.size,
+        isEncrypted: a.isEncrypted,
+        encryptionIv: a.encryptionIv
+    }));
+
+    // 2. Prepare content
+    const content = body || (selectedTemplate?.msg || 'No content provided.');
+    
+    // 3. Try On-Chain Transaction if Construct ID is available
+    if (constructId && account) {
+        try {
+            // Map category string to u8 (Example mapping)
+            // 'system' -> 0, 'health' -> 1, 'work' -> 2, etc.
+            const categoryMap: Record<string, number> = {
+                'system': 0, 'health': 1, 'work': 2, 'social': 3, 'finance': 4, 'hobby': 5, 'travel': 6
+            };
+            const catVal = categoryMap[category] ?? 0;
+            
+            // Map mood/energy to emotionVal u8
+            const emotionVal = 50; // TODO: Map from mood icon
+
+            const tx = buildEngraveTx(
+                constructId,
+                content,
+                emotionVal,
+                catVal,
+                isEncrypted,
+                validAttachments.length > 0 ? validAttachments[0].blobId : undefined 
+                // Currently contract supports 1 blob_id. 
+                // For multiple, we'd need to update contract or serialize.
+            );
+
+            signAndExecuteTransaction(
+                { transaction: tx },
+                {
+                    onSuccess: (result) => {
+                        console.log("Transaction digest:", result.digest);
+                        triggerAlert({
+                            type: 'success',
+                            title: 'TRACE ENGRAVED',
+                            message: `Memory permanently etched into Hive Mind.\nDigest: ${result.digest.slice(0,8)}...`,
+                            duration: 5000
+                        });
+                        // Add to local store for immediate feedback (optimistic)
+                        addLog({
+                            content,
+                            category,
+                            type: type as any,
+                            metadata: { weather, mood, icon, attachments: validAttachments },
+                            hash: result.digest // Use real digest
+                        });
+                        onExit();
+                    },
+                    onError: (err) => {
+                        console.error("Engrave failed:", err);
+                        triggerAlert({
+                            type: 'error',
+                            title: 'ENGRAVING FAILURE',
+                            message: 'Neural link rejected the transaction. Saving locally instead.',
+                        });
+                        // Fallback: Save locally only? Or just show error?
+                        // For now, let's allow local save as fallback so user doesn't lose data
+                        addLog({
+                            content,
+                            category,
+                            type: type as any,
+                            metadata: { weather, mood, icon, attachments: validAttachments }
+                        });
+                        onExit();
+                    }
+                }
+            );
+            return;
+        } catch (e) {
+            console.error("Transaction build error:", e);
+        }
+    } else {
+        // Fallback: Local Only (Mock Mode or No Wallet)
+        if (!account) {
+            triggerAlert({ type: 'warning', title: 'OFFLINE MODE', message: 'Wallet not connected. Saving locally.' });
+        } else if (!constructId) {
+            triggerAlert({ type: 'warning', title: 'NO CONSTRUCT', message: 'User construct not found. Saving locally.' });
+        }
+
+        addLog({
+            content,
+            category,
+            type: type as any,
+            metadata: { weather, mood, icon, attachments: validAttachments }
+        });
+        onExit();
+    }
+  };
 
   return (
     <div className="h-full flex flex-col p-4 overflow-hidden font-mono text-xs">
@@ -237,13 +273,13 @@ export function JournalEditor({ onExit }: JournalEditorProps) {
               <div className="space-y-1">
                 <label className="text-[10px] text-titanium-grey block"><Cloud size={10} className="inline mr-1"/> WEATHER</label>
                 <div className="grid grid-cols-6 gap-1 bg-void-black border border-titanium-grey/30 rounded p-1">
-                  {WEATHER_ICONS.map(icon => (
+                  {WEATHER_ICONS.map(ic => (
                     <button 
-                      key={icon} 
-                      onClick={() => setWeather(icon)}
-                      className={`aspect-square flex items-center justify-center hover:bg-white/10 rounded ${weather === icon ? 'bg-neon-cyan/20' : ''}`}
+                      key={ic} 
+                      onClick={() => setWeather(ic)}
+                      className={`aspect-square flex items-center justify-center hover:bg-white/10 rounded ${weather === ic ? 'bg-neon-cyan/20' : ''}`}
                     >
-                      {icon}
+                      {ic}
                     </button>
                   ))}
                 </div>
@@ -252,13 +288,13 @@ export function JournalEditor({ onExit }: JournalEditorProps) {
               <div className="space-y-1">
                 <label className="text-[10px] text-titanium-grey block"><Smile size={10} className="inline mr-1"/> MOOD</label>
                 <div className="grid grid-cols-6 gap-1 bg-void-black border border-titanium-grey/30 rounded p-1">
-                  {MOOD_ICONS.map(icon => (
+                  {MOOD_ICONS.map(ic => (
                     <button 
-                      key={icon} 
-                      onClick={() => setMood(icon)}
-                      className={`aspect-square flex items-center justify-center hover:bg-white/10 rounded ${mood === icon ? 'bg-neon-cyan/20' : ''}`}
+                      key={ic} 
+                      onClick={() => setMood(ic)}
+                      className={`aspect-square flex items-center justify-center hover:bg-white/10 rounded ${mood === ic ? 'bg-neon-cyan/20' : ''}`}
                     >
-                      {icon}
+                      {ic}
                     </button>
                   ))}
                 </div>
@@ -389,38 +425,7 @@ export function JournalEditor({ onExit }: JournalEditorProps) {
             ) : (
               <button 
                 className="bg-neon-cyan text-void-black px-6 py-2 font-bold hover:bg-white transition-colors flex items-center gap-2"
-                onClick={() => {
-                  // Process Attachments
-                  const validAttachments = attachments
-                    .filter(a => a.status === 'uploaded' && a.blobId)
-                    .map(a => ({
-                      blobId: a.blobId!,
-                      name: a.file.name,
-                      type: a.file.type,
-                      size: a.file.size,
-                      isEncrypted: a.isEncrypted,
-                      encryptionIv: a.encryptionIv
-                    }));
-
-                  addLog({
-                    content: body || (selectedTemplate?.msg || 'No content provided.'),
-                    category: category,
-                    type: type as any,
-                    metadata: {
-                      weather,
-                      mood,
-                      icon, // Include selected icon
-                      attachments: validAttachments
-                    }
-                  });
-                  triggerAlert({
-                    type: 'success',
-                    title: 'TRACE UPLOADED',
-                    message: 'Journal entry successfully synchronized to Hive Mind.',
-                    duration: 3000
-                  });
-                  onExit();
-                }}
+                onClick={handleUpload}
               >
                 <Save size={14} /> UPLOAD TRACE
               </button>
