@@ -11,7 +11,8 @@ export const buildEngraveTx = (
   emotionVal: number,
   category: number,
   isEncrypted: boolean,
-  blobId?: string
+  blobId?: string,
+  mediaType?: string
 ) => {
   const tx = new Transaction();
 
@@ -20,10 +21,11 @@ export const buildEngraveTx = (
   // hive: &mut HiveState,
   // clock: &Clock,
   // content: String,
-  // emotion_val: u8,
+  // mood: u8,
   // category: u8,
   // is_encrypted: bool,
-  // blob_id: Option<String>
+  // blob_id: Option<String>,
+  // media_type: Option<String>
 
   tx.moveCall({
     target: `${PACKAGE_ID}::${MODULE_NAME}::engrave`,
@@ -35,7 +37,8 @@ export const buildEngraveTx = (
       tx.pure.u8(emotionVal),
       tx.pure.u8(category),
       tx.pure.bool(isEncrypted),
-      tx.pure.option('string', blobId || null)
+      tx.pure.option('string', blobId || null),
+      tx.pure.option('string', mediaType || null)
     ],
   });
 

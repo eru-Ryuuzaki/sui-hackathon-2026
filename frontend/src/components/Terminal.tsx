@@ -10,8 +10,9 @@ import { triggerAlert } from '@/components/ui/SystemAlert';
 import { MatrixRain } from '@/components/ui/MatrixRain';
 import { CyberAvatar } from '@/components/ui/CyberAvatar';
 import { JournalEditor } from '@/components/ui/JournalEditor';
+import { MemoryArchive } from '@/components/ui/MemoryArchive';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Terminal as TerminalIcon, PlusSquare, Trash2, Activity, XCircle } from 'lucide-react';
+import { Terminal as TerminalIcon, PlusSquare, Trash2, Activity, XCircle, List } from 'lucide-react';
 import { IdentityRegistrationModal } from '@/components/IdentityRegistrationModal';
 
 interface TerminalLine {
@@ -41,8 +42,8 @@ export function Terminal() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [showMatrix, setShowMatrix] = useState(false);
 
-  // Mode State (CLI vs Journal)
-  const [mode, setMode] = useState<'CLI' | 'JOURNAL'>('CLI');
+  // Mode State (CLI vs Journal vs Archive)
+  const [mode, setMode] = useState<'CLI' | 'JOURNAL' | 'ARCHIVE'>('CLI');
 
   useEffect(() => {
     if (mode === 'CLI') {
@@ -322,11 +323,11 @@ export function Terminal() {
               <div className="flex items-center gap-2">
                  <TerminalIcon size={14} className="text-neon-cyan" />
                  <span className="text-xs text-titanium-grey font-mono">
-                   {mode === 'CLI' ? 'TERMINAL_V1.0' : 'TRACE_LOGGER_V1.0'}
+                   {mode === 'CLI' ? 'TERMINAL_V1.0' : mode === 'JOURNAL' ? 'TRACE_LOGGER_V1.0' : 'MEMORY_ARCHIVE_V1.0'}
                  </span>
               </div>
               <div className="flex gap-2">
-                 {mode === 'JOURNAL' ? (
+                 {mode !== 'CLI' ? (
                    <button 
                      onClick={() => setMode('CLI')}
                      className="text-[10px] flex items-center gap-1 px-2 py-1 rounded border border-glitch-red/50 text-glitch-red hover:bg-glitch-red/10 transition-colors"
@@ -341,6 +342,13 @@ export function Terminal() {
                        title="New Log Entry"
                      >
                        <PlusSquare size={10} /> NEW_LOG
+                     </button>
+                     <button 
+                       onClick={() => isConnected ? setMode('ARCHIVE') : triggerAlert({ type: 'warning', title: 'ACCESS DENIED', message: 'Connect wallet to view archives.' })}
+                       className="text-[10px] flex items-center gap-1 px-2 py-1 rounded border border-titanium-grey/30 hover:border-neon-cyan hover:text-neon-cyan transition-colors text-titanium-grey"
+                       title="View Memory Archive"
+                     >
+                       <List size={10} /> LOGS
                      </button>
                      <button 
                        onClick={handleStatus}
@@ -417,7 +425,7 @@ export function Terminal() {
                       </div>
                    </div>
                  </motion.div>
-               ) : (
+               ) : mode === 'JOURNAL' ? (
                  <motion.div 
                    key="journal"
                    initial={{ opacity: 0, rotateY: 90 }}
@@ -427,6 +435,17 @@ export function Terminal() {
                    className="absolute inset-0 bg-void-black"
                  >
                    <JournalEditor onExit={() => setMode('CLI')} />
+                 </motion.div>
+               ) : (
+                 <motion.div 
+                   key="archive"
+                   initial={{ opacity: 0, rotateY: 90 }}
+                   animate={{ opacity: 1, rotateY: 0 }}
+                   exit={{ opacity: 0, rotateY: -90 }}
+                   transition={{ duration: 0.4 }}
+                   className="absolute inset-0 bg-void-black"
+                 >
+                   <MemoryArchive onExit={() => setMode('CLI')} />
                  </motion.div>
                )}
              </AnimatePresence>

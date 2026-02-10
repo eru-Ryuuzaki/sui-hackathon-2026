@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { useJournalForm } from '@/hooks/useJournalForm';
@@ -53,11 +53,13 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
         type, setType,
         isEncrypted, setIsEncrypted,
         selectedTemplate, 
+        isCustomMessage,
         body, 
         icon, 
         weather, setWeather,
         mood, setMood,
         attachments, setAttachments,
+        showIconPicker, setShowIconPicker,
     },
     refs: { dateInputRef, timeInputRef },
     derived: { availableTypes, availableTemplates },
@@ -65,9 +67,37 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
         handleTemplateSelect,
         handleBodyChange,
         handleIconChange,
-        validateDate
+        validateDate,
+        resetForm
     }
   } = useJournalForm();
+
+  // Strict Map to Move Contract Enum:
+  // 0:System, 1:Protocol, 2:Achievement, 3:Challenge, 4:Dream
+  const CATEGORY_MAP: Record<LogTemplateCategory, number> = {
+    system: 0,
+    protocol: 1,
+    achievement: 2,
+    challenge: 3,
+    dream: 4,
+  };
+
+  // Convert Mood String/Emoji to u8 (0-100)
+  // Default neutral = 50
+  const MOOD_MAP: Record<string, number> = {
+     '😊': 75,
+     '😐': 50,
+     '😢': 25,
+     '😡': 10,
+     '🥳': 90,
+     '😴': 40,
+     '🤢': 20,
+     '🤯': 80,
+     '🥶': 30,
+     '🥵': 30
+  };
+
+  const getMoodValue = (m: string) => MOOD_MAP[m] || 50;
 
   // Current Category Color
   const categoryColor = CATEGORY_COLORS[category];
@@ -99,105 +129,57 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
       if (tmpl) handleTemplateSelect(tmpl);
   };
 
-  const handleUpload = () => {
-    // 1. Process Attachments
-    const validAttachments = attachments
-    .filter(a => a.status === 'uploaded' && a.blobId)
-    .map(a => ({
-        blobId: a.blobId!,
-        name: a.file.name,
-        type: a.file.type,
-        size: a.file.size,
-        isEncrypted: a.isEncrypted,
-        encryptionIv: a.encryptionIv
-    }));
-
-    // 2. Prepare content
-    const content = body || (selectedTemplate?.msg || 'No content provided.');
+  // Handle Submit (Write to Blockchain)
+  const handleUpload = async () => {
+    if (!account) return;
     
-    // 3. Try On-Chain Transaction if Construct ID is available
-    if (constructId && account) {
-        try {
-            // Map category string to u8 (Example mapping)
-            // 'system' -> 0, 'health' -> 1, 'work' -> 2, etc.
-            const categoryMap: Record<string, number> = {
-                'system': 0, 'health': 1, 'work': 2, 'social': 3, 'finance': 4, 'hobby': 5, 'travel': 6
-            };
-            const catVal = categoryMap[category] ?? 0;
-            
-            // Map mood/energy to emotionVal u8
-            const emotionVal = 50; // TODO: Map from mood icon
+    // Display Body logic same as preview
+    const finalContent = body || selectedTemplate?.msg || '';
 
-            const tx = buildEngraveTx(
-                constructId,
-                content,
-                emotionVal,
-                catVal,
-                isEncrypted,
-                validAttachments.length > 0 ? validAttachments[0].blobId : undefined 
-                // Currently contract supports 1 blob_id. 
-                // For multiple, we'd need to update contract or serialize.
-            );
-
-            signAndExecuteTransaction(
-                { transaction: tx },
-                {
-                    onSuccess: (result) => {
-                        console.log("Transaction digest:", result.digest);
-                        triggerAlert({
-                            type: 'success',
-                            title: 'TRACE ENGRAVED',
-                            message: `Memory permanently etched into Hive Mind.\nDigest: ${result.digest.slice(0,8)}...`,
-                            duration: 5000
-                        });
-                        // Add to local store for immediate feedback (optimistic)
-                        addLog({
-                            content,
-                            category,
-                            type: type as any,
-                            metadata: { weather, mood, icon, attachments: validAttachments, sentiment: 50 }, // Added sentiment placeholder
-                            hash: result.digest
-                        });
-                        onExit();
-                    },
-                    onError: (err) => {
-                        console.error("Engrave failed:", err);
-                        triggerAlert({
-                            type: 'error',
-                            title: 'ENGRAVING FAILURE',
-                            message: 'Neural link rejected the transaction. Saving locally instead.',
-                        });
-                        // Fallback: Save locally only? Or just show error?
-                        // For now, let's allow local save as fallback so user doesn't lose data
-                        addLog({
-                            content,
-                            category,
-                            type: type as any,
-                            metadata: { weather, mood, icon, attachments: validAttachments, sentiment: 50 } // Added sentiment placeholder
-                        });
-                        onExit();
-                    }
-                }
-            );
-            return;
-        } catch (e) {
-            console.error("Transaction build error:", e);
+    // Optimistic Update (Local State)
+    addLog({
+        content: finalContent,
+        category: category,
+        type: type as any,
+        metadata: {
+            date,
+            time,
+            icon,
+            isEncrypted,
+            mood,
+            attachments
         }
-    } else {
-        // Fallback: Local Only (Mock Mode or No Wallet)
-        if (!account) {
-            triggerAlert({ type: 'warning', title: 'OFFLINE MODE', message: 'Wallet not connected. Saving locally.' });
-        } else if (!constructId) {
-            triggerAlert({ type: 'warning', title: 'NO CONSTRUCT', message: 'User construct not found. Saving locally.' });
-        }
+    });
 
-        addLog({
-            content,
-            category,
-            type: type as any,
-            metadata: { weather, mood, icon, attachments: validAttachments, sentiment: 50 }
+    try {
+        // Construct Transaction
+        // Current limitation: Move contract only accepts ONE blob_id and ONE media_type
+        // We take the first attachment if available.
+        const primaryAttachment = attachments.length > 0 ? attachments[0] : undefined;
+
+        const tx = buildEngraveTx(
+            constructId,
+            finalContent,
+            getMoodValue(mood), // Converted Mood
+            CATEGORY_MAP[category], // Correct Category Enum
+            isEncrypted,
+            primaryAttachment?.blobId,
+            primaryAttachment?.type // Pass Media Type
+        );
+
+        await signAndExecuteTransaction({ transaction: tx }, {
+            onSuccess: (result) => {
+                console.log('Engraved successfully:', result);
+                resetForm();
+                onExit();
+            },
+            onError: (err) => {
+                console.error('Engraving failed:', err);
+                // Ideally rollback optimistic update here
+            }
         });
-        onExit();
+    } catch (e) {
+        console.error("Failed to build transaction:", e);
     }
   };
 
