@@ -4,6 +4,7 @@ import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { useJournalForm } from '@/hooks/useJournalForm';
 import { CATEGORY_COLORS, LOG_TEMPLATES, type LogTemplateCategory } from '@/data/logTemplates';
 import { AttachmentUploader } from '@/components/ui/AttachmentUploader';
+import { useGlobalLoader } from '@/components/ui/GlobalLoader';
 import { 
   Terminal as TerminalIcon, 
   Activity, 
@@ -36,6 +37,7 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
   // const account = useCurrentAccount(); // Removed direct account dep
   const { createLog, isMock } = useLogService();
   const { addLog } = useMemoryStore(); // Still used for optimistic UI updates
+  const loader = useGlobalLoader();
   
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [customIcon, setCustomIcon] = useState('📝');
@@ -209,9 +211,7 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
              throw new Error("Construct ID is missing");
         }
         
-        // Show some loading indicator here?
-        // For now, we just await
-        console.log("Submitting log via Service (Mock: " + isMock + ")...");
+        loader.show(isMock ? "SIMULATING NEURAL UPLOAD..." : "ENGRAVING TO SUI BLOCKCHAIN...");
 
         const result = await createLog({
             constructId,
@@ -274,6 +274,8 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
 
     } catch (e) {
         console.error("Failed to execute upload:", e);
+    } finally {
+        loader.hide();
     }
   };
 

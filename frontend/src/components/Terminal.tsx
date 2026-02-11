@@ -98,6 +98,9 @@ export function Terminal() {
 
   // --- Registration Callback ---
   const handleIdentityConfirm = (codename: string, birthday: string) => {
+    // IMMEDIATE ACTION: Close Modal First
+    setIsRegistering(false);
+
     // 1. Trigger Matrix Rain (Visual Metaphor for Upload)
     setShowMatrix(true);
     
@@ -144,7 +147,7 @@ export function Terminal() {
         { id: Math.random().toString(), type: 'system', content: `> TYPE 'HELP' TO BEGIN.` }
       ]);
       
-      setIsRegistering(false);
+      // setIsRegistering(false); // <--- Removed: Already closed at start
       setTimeout(() => setShowMatrix(false), 5000); // Fade out matrix rain
     }, delay + 1000);
   };

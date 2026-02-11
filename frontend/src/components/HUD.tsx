@@ -17,6 +17,7 @@ export function HUD() {
   const [isRerolling, setIsRerolling] = useState(false);
   const [hasRerolledInHover, setHasRerolledInHover] = useState(false); 
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isLoginLoading, setIsLoginLoading] = useState(false); // Local loading state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false); 
   
   // Balance Visibility State (Default: Visible)
@@ -77,6 +78,15 @@ export function HUD() {
     status: isConnected ? 'ONLINE' : 'OFFLINE'
   };
 
+  const handleLoginClick = () => {
+      setIsLoginLoading(true);
+      // Simulate connection delay for better UX (or wait for modal to be ready)
+      setTimeout(() => {
+          setIsLoginOpen(true);
+          setIsLoginLoading(false);
+      }, 500);
+  };
+
   const handleDisconnect = () => {
       if (account) disconnect();
       logout();
@@ -135,13 +145,29 @@ export function HUD() {
 
            {!isConnected ? (
              <button 
-               onClick={() => setIsLoginOpen(true)}
-               className="group relative px-6 py-2 bg-transparent border border-neon-cyan text-neon-cyan font-mono text-sm tracking-widest overflow-hidden hover:text-void-black transition-colors"
+               onClick={handleLoginClick}
+               disabled={isLoginLoading}
+               className={`group relative px-6 py-2 bg-transparent border font-mono text-sm tracking-widest overflow-hidden transition-colors ${
+                 isLoginLoading 
+                   ? "border-titanium-grey text-titanium-grey cursor-not-allowed" 
+                   : "border-neon-cyan text-neon-cyan hover:text-void-black"
+               }`}
              >
-               <div className="absolute inset-0 bg-neon-cyan translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 z-0" />
+               <div className={`absolute inset-0 bg-neon-cyan transition-transform duration-300 z-0 ${
+                 isLoginLoading ? "translate-x-[-100%]" : "translate-x-[-100%] group-hover:translate-x-0"
+               }`} />
                <span className="relative z-10 flex items-center gap-2">
-                 <Radio size={14} className="animate-pulse" />
-                 [ LINK NEURAL INTERFACE ]
+                 {isLoginLoading ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-titanium-grey border-t-transparent rounded-full animate-spin" />
+                      CONNECTING...
+                    </>
+                 ) : (
+                    <>
+                      <Radio size={14} className="animate-pulse" />
+                      [ LINK NEURAL INTERFACE ]
+                    </>
+                 )}
                </span>
              </button>
            ) : (

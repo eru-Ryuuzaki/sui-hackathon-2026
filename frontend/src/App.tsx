@@ -6,6 +6,7 @@ import { OAuthCallbackHandler } from '@/components/OAuthCallbackHandler';
 import { useEffect } from 'react';
 import { useLogService } from '@/hooks/useLogService';
 import { useMemoryStore } from '@/hooks/useMemoryStore';
+import { GlobalLoader } from '@/components/ui/GlobalLoader';
 
 function App() {
   const { fetchLogs } = useLogService();
@@ -42,6 +43,7 @@ function App() {
   return (
     <div className="h-screen bg-void-black text-neon-cyan font-mono p-4 md:p-8 relative overflow-hidden flex flex-col">
       <SystemAlert />
+      <GlobalLoader />
       <OAuthCallbackHandler />
       
       {/* Scanline Effect */}

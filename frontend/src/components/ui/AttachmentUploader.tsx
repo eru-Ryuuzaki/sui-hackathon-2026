@@ -6,6 +6,7 @@ import { useEncryptionStore } from '@/hooks/useEncryptionStore';
 import { Upload, File as FileIcon, X, Lock, Loader2 } from 'lucide-react';
 import { triggerAlert } from '@/components/ui/SystemAlert';
 import { cn } from '@/utils/cn';
+import { useGlobalLoader } from '@/components/ui/GlobalLoader';
 
 export interface Attachment {
   id: string;
@@ -30,6 +31,7 @@ import { Activity, Check } from 'lucide-react';
 export function AttachmentUploader({ attachments, onAttachmentsChange, isEncryptedGlobal }: AttachmentUploaderProps) {
   const { mutateAsync: signMessage } = useSignPersonalMessage();
   const { sessionKey, setSessionKey } = useEncryptionStore();
+  const loader = useGlobalLoader();
   
   // Warning State for Upload
   const [showUploadWarning, setShowUploadWarning] = useState(() => {
@@ -48,6 +50,7 @@ export function AttachmentUploader({ attachments, onAttachmentsChange, isEncrypt
     if (sessionKey) return sessionKey;
     
     try {
+      loader.show("AWAITING SECURITY SIGNATURE...");
       // Request Signature to derive key
       // Message to sign: "ENGRAM_ACCESS_KEY_DERIVATION"
       const msgBytes = new TextEncoder().encode("ENGRAM_ACCESS_KEY_DERIVATION");
@@ -66,6 +69,8 @@ export function AttachmentUploader({ attachments, onAttachmentsChange, isEncrypt
       console.error("Key Derivation Failed:", error);
       triggerAlert({ type: 'error', title: 'ACCESS DENIED', message: 'Failed to derive encryption key.' });
       throw error;
+    } finally {
+      loader.hide();
     }
   };
 
