@@ -45,17 +45,23 @@
     - **交易白名单**：Gas Station 只赞助 `engram::create_log`, `engram::mint_badge` 等核心业务合约调用，严禁赞助 `sui::transfer` 等资产转移操作。
     - **异常检测**：若单个账户短时间内高频调用（如 1秒 5次），触发风控封锁。
 
-## 4. 技术架构：Gas Station Service
+## 4. 技术架构：Gas Station Service (Implemented)
 
-我们将构建一个独立的微服务 `GasStationService`：
+我们将构建一个独立的微服务 `GasStationService`，采用 **Scheme B (Backend Database)** 方案进行额度管理：
 
 - **API**: `POST /api/gas/sponsor`
-- **Input**: 未签名的 `TransactionBlock` (Bytes)。
+- **Input**: `txBytes` (Base64), `sender` (Address)。
+- **Storage**: `SponsorshipUsage` (PostgreSQL)。记录每次赞助的 `user_address`, `gas_budget`, `action_type`。
 - **Process**:
-  1.  解析交易，验证调用的合约方法是否在白名单。
-  2.  查询用户历史累计赞助额度。
-  3.  若 `累计额度 < 0.25 SUI`，则使用 Sponsor Key 进行签名。
-- **Output**: `SponsorSignature`。
+  1.  **Quota Check**: 查询数据库计算用户历史累计赞助额度 (`SUM(gas_budget)`)。
+      - 若 `累计额度 >= 0.25 SUI` (250,000,000 MIST)，拒绝服务。
+  2.  **Whitelist Validation**: 解析交易，验证 `MoveCall` 目标是否在白名单内：
+      - `...::core::engrave` (刻录记忆)
+      - `...::core::jack_in` (初始化/注册)
+      - `...::core::set_backup_controller` (设置逃生舱)
+      - _严禁 `sui::transfer` 或其他未知调用_。
+  3.  **Sign & Record**: 使用 Sponsor Key 签名，并向数据库插入一条新的 `SponsorshipUsage` 记录。
+- **Output**: `SponsorSignature`, `txBytes` (含 Gas Payment)。
 
 ## 5. 未来扩展：从补贴到自循环
 

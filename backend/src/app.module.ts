@@ -12,6 +12,7 @@ import { Construct } from './entities/construct.entity';
 import { MemoryShard } from './entities/memory-shard.entity';
 import { NeuralBadge } from './entities/neural-badge.entity';
 import { EventCursor } from './entities/event-cursor.entity';
+import { SponsorshipUsage } from './entities/sponsorship-usage.entity';
 import { IndexerModule } from './indexer/indexer.module';
 import { SuiModule } from './sui/sui.module';
 import { ApiModule } from './api/api.module';
@@ -39,18 +40,29 @@ import { ApiModule } from './api/api.module';
           host: configService.get<string>('POSTGRES_HOST', 'localhost'),
           port: configService.get<number>('POSTGRES_PORT', 5432),
           username: configService.get<string>('POSTGRES_USER', 'engram'),
-          password: configService.get<string>('POSTGRES_PASSWORD', 'engram_password'),
+          password: configService.get<string>(
+            'POSTGRES_PASSWORD',
+            'engram_password',
+          ),
           database: configService.get<string>('POSTGRES_DB', 'engram_db'),
-          entities: [Construct, MemoryShard, NeuralBadge, EventCursor],
+          entities: [
+            Construct,
+            MemoryShard,
+            NeuralBadge,
+            EventCursor,
+            SponsorshipUsage,
+          ],
           synchronize: true, // Auto-create tables (dev only)
         };
-        
+
         console.log('--- Database Connection Config ---');
         console.log(`Host: ${dbConfig.host}`);
         console.log(`Port: ${dbConfig.port}`);
         console.log(`User: ${dbConfig.username}`);
         console.log(`Database: ${dbConfig.database}`);
-        console.log(`Password: ${dbConfig.password ? '****** (Set)' : 'NOT SET'}`);
+        console.log(
+          `Password: ${dbConfig.password ? '****** (Set)' : 'NOT SET'}`,
+        );
         console.log('--------------------------------');
 
         return dbConfig;

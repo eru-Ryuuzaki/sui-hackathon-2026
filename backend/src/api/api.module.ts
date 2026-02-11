@@ -9,6 +9,7 @@ import { Construct } from '../entities/construct.entity';
 import { MemoryShard } from '../entities/memory-shard.entity';
 import { NeuralBadge } from '../entities/neural-badge.entity';
 import { FaucetRecord } from '../entities/faucet-record.entity';
+import { SponsorshipUsage } from '../entities/sponsorship-usage.entity';
 import { MemoryService } from '../services/memory.service';
 import { FaucetService } from '../services/faucet.service';
 import { GasStationService } from '../services/gas-station.service';
@@ -16,7 +17,13 @@ import { GasStationController } from './gas-station.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Construct, MemoryShard, NeuralBadge, FaucetRecord]),
+    TypeOrmModule.forFeature([
+      Construct,
+      MemoryShard,
+      NeuralBadge,
+      FaucetRecord,
+      SponsorshipUsage,
+    ]),
   ],
   controllers: [
     FaucetController,
@@ -26,10 +33,6 @@ import { GasStationController } from './gas-station.controller';
     ConstructController,
     ZkLoginController,
   ],
-  providers: [
-    MemoryService,
-    FaucetService,
-    GasStationService,
-  ],
+  providers: [MemoryService, FaucetService, GasStationService],
 })
 export class ApiModule {}

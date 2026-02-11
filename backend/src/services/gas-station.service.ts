@@ -4,21 +4,20 @@ import { TransactionBlock } from '@mysten/sui.js/transactions';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-// We'll need a new entity to track sponsorship usage
-// import { SponsorshipUsage } from '../entities/sponsorship-usage.entity';
+import { SponsorshipUsage } from '../entities/sponsorship-usage.entity';
 
 @Injectable()
 export class GasStationService {
   private readonly logger = new Logger(GasStationService.name);
-  
+
   // Hard cap: 0.25 SUI (in MIST)
-  private readonly LIFETIME_CAP_MIST = 250_000_000; 
+  private readonly LIFETIME_CAP_MIST = 250_000_000;
 
   constructor(
     private suiService: SuiService,
     private configService: ConfigService,
-    // @InjectRepository(SponsorshipUsage)
-    // private usageRepo: Repository<SponsorshipUsage>,
+    @InjectRepository(SponsorshipUsage)
+    private usageRepo: Repository<SponsorshipUsage>,
   ) {}
 
   /**
@@ -28,69 +27,181 @@ export class GasStationService {
    */
   async sponsorTransaction(txBytes: string, senderAddress: string) {
     // 1. Check Usage Limit
-    // TODO: Implement DB check
-    const currentUsage = 0; // await this.getUsage(senderAddress);
+    const currentUsage = await this.getUsage(senderAddress);
     if (currentUsage >= this.LIFETIME_CAP_MIST) {
-        throw new Error('NEURAL_ENERGY_DEPLETED');
+      this.logger.warn(
+        `User ${senderAddress} exceeded gas cap. Usage: ${currentUsage}`,
+      );
+      throw new Error('NEURAL_ENERGY_DEPLETED');
     }
 
     // 2. Deserialize Transaction
-    const tx = TransactionBlock.from(txBytes);
-    
+    let tx: TransactionBlock;
+    try {
+      tx = TransactionBlock.from(txBytes);
+    } catch (e) {
+      throw new Error('INVALID_TRANSACTION_BYTES');
+    }
+
     // 3. Validate Transaction (Whitelist)
-    // For MVP, we skip deep inspection, but in prod we must inspect tx.blockData
-    
+    const packageId = this.configService.get<string>('SUI_PACKAGE_ID');
+    const moduleName = 'core'; // Core module
+    const allowedTargets = [
+      `${packageId}::${moduleName}::engrave`,
+      `${packageId}::${moduleName}::jack_in`,
+      `${packageId}::${moduleName}::set_backup_controller`,
+    ];
+
+    const blockData = tx.blockData;
+    // Iterate over all transactions in the block
+    for (const command of blockData.transactions) {
+      if (command.kind !== 'MoveCall') {
+        this.logger.warn(
+          `Blocked non-MoveCall transaction from ${senderAddress}`,
+        );
+        throw new Error('TRANSACTION_NOT_ALLOWED: Only Move calls allowed');
+      }
+
+      // Check target
+      const target = command.target;
+      if (!allowedTargets.includes(target)) {
+        this.logger.warn(
+          `Blocked unauthorized target ${target} from ${senderAddress}`,
+        );
+        throw new Error(
+          `TRANSACTION_NOT_ALLOWED: Target ${target} not in whitelist`,
+        );
+      }
+    }
+
     // 4. Set Gas Payment
-    // We need the sponsor signer from SuiService
     const signer = this.suiService.getSigner();
     if (!signer) {
-        throw new Error('GAS_STATION_OFFLINE');
+      throw new Error('GAS_STATION_OFFLINE');
     }
     const sponsorAddress = signer.toSuiAddress();
-    
+    const client = this.suiService.getClient();
+
     tx.setSender(senderAddress);
     tx.setGasOwner(sponsorAddress);
-    
-    // Set Budget (e.g. 0.01 SUI)
-    tx.setGasBudget(10_000_000); 
 
-    // 5. Sign
-    // Note: In @mysten/sui.js, we need to build the transaction to get the bytes to sign
-    // However, the client sent us the bytes. We need to apply gas config and re-build.
-    
-    const client = this.suiService.getClient();
-    
-    // Get Sponsor's Coins for Gas Payment
+    // Preliminary Coin Selection (Need at least one coin to dry run)
+    // We select a coin with ample balance just for the simulation
     const coins = await client.getCoins({
-        owner: sponsorAddress,
-        coinType: '0x2::sui::SUI'
+      owner: sponsorAddress,
+      coinType: '0x2::sui::SUI',
     });
-    
+
     if (coins.data.length === 0) {
-        throw new Error('GAS_STATION_EMPTY');
+      throw new Error('GAS_STATION_EMPTY');
     }
-    
-    // Naive coin selection: pick first one with enough balance
-    const paymentCoin = coins.data.find(c => parseInt(c.balance) > 10_000_000);
-    if (!paymentCoin) {
-         throw new Error('GAS_STATION_FRAGMENTED');
+
+    // Pick a random coin to reduce collision in MVP
+    // We assume this coin has enough balance for Dry Run (usually true for sponsor wallets)
+    const dryRunCoin =
+      coins.data[Math.floor(Math.random() * coins.data.length)];
+    tx.setGasPayment([
+      {
+        objectId: dryRunCoin.coinObjectId,
+        version: dryRunCoin.version,
+        digest: dryRunCoin.digest,
+      },
+    ]);
+
+    // Set a temporary high budget for Dry Run to ensure it passes
+    tx.setGasBudget(50_000_000);
+
+    // 5. Dry Run & Estimate Gas
+    const dryRunBytes = await tx.build({ client });
+    const dryRunResult = await client.dryRunTransactionBlock({
+      transactionBlock: dryRunBytes,
+    });
+
+    if (dryRunResult.effects.status.status !== 'success') {
+      this.logger.warn(`Dry Run Failed: ${dryRunResult.effects.status.error}`);
+      throw new Error('TRANSACTION_SIMULATION_FAILED');
     }
-    
-    tx.setGasPayment([{ objectId: paymentCoin.coinObjectId, version: paymentCoin.version, digest: paymentCoin.digest }]);
+
+    // Calculate Real Gas Budget
+    // formula: (computationCost + storageCost - storageRebate) * 1.2 buffer
+    const gasUsed = dryRunResult.effects.gasUsed;
+    const computationCost = parseInt(gasUsed.computationCost);
+    const storageCost = parseInt(gasUsed.storageCost);
+    const storageRebate = parseInt(gasUsed.storageRebate);
+
+    // We need to cover at least computation + storage. Rebate is returned to user/sponsor, but we need to put it up front.
+    // Safe Budget = (Computation + Storage) * 1.5 Safety Factor
+    const estimatedCost = computationCost + storageCost;
+    const SAFE_BUDGET = Math.ceil(estimatedCost * 1.5);
+
+    // Re-Check Usage Limit with REAL Budget
+    if (currentUsage + SAFE_BUDGET >= this.LIFETIME_CAP_MIST) {
+      this.logger.warn(
+        `User ${senderAddress} insufficient energy for estimated cost ${SAFE_BUDGET}`,
+      );
+      throw new Error('NEURAL_ENERGY_INSUFFICIENT');
+    }
+
+    // 6. Apply Real Budget & Payment
+    tx.setGasBudget(SAFE_BUDGET);
+
+    // Re-select coin ensuring it covers the specific SAFE_BUDGET
+    const validCoins = coins.data.filter(
+      (c) => parseInt(c.balance) > SAFE_BUDGET,
+    );
+    if (validCoins.length === 0) {
+      throw new Error('GAS_STATION_FRAGMENTED');
+    }
+    const paymentCoin =
+      validCoins[Math.floor(Math.random() * validCoins.length)];
+    tx.setGasPayment([
+      {
+        objectId: paymentCoin.coinObjectId,
+        version: paymentCoin.version,
+        digest: paymentCoin.digest,
+      },
+    ]);
 
     // Build the bytes for signing
     const buildBytes = await tx.build({ client });
-    
+
     // Sign
-    // TS Error: Object literal may only specify known properties, and 'transactionBlock' does not exist in type 'Uint8Array'.
-    // This implies signTransactionBlock expects Uint8Array as the first argument, NOT an object.
-    // This happens in some versions of the SDK where the signature is (transactionBlock: Uint8Array | TransactionBlock)
-    
     const { signature } = await signer.signTransactionBlock(buildBytes as any);
 
+    // 7. Record Usage (Scheme B: DB Storage)
+    // We assume the transaction WILL be submitted.
+    const usage = new SponsorshipUsage();
+    usage.user_address = senderAddress;
+    usage.gas_budget = SAFE_BUDGET.toString();
+    usage.action_type = 'unknown';
+
+    // Safety check for target access
+    const firstTx = blockData.transactions[0];
+    if (firstTx && firstTx.kind === 'MoveCall') {
+      const parts = firstTx.target.split('::');
+      if (parts.length >= 3) {
+        usage.action_type = parts[2];
+      }
+    }
+
+    await this.usageRepo.save(usage);
+    this.logger.log(
+      `Sponsored ${usage.action_type} for ${senderAddress}. Est. Cost: ${estimatedCost}, Budget: ${SAFE_BUDGET}`,
+    );
+
     return {
-        txBytes: Buffer.from(buildBytes).toString('base64'),
-        sponsorSignature: signature
+      txBytes: Buffer.from(buildBytes).toString('base64'),
+      sponsorSignature: signature,
     };
+  }
+
+  private async getUsage(address: string): Promise<number> {
+    const result = await this.usageRepo
+      .createQueryBuilder('usage')
+      .select('SUM(usage.gas_budget)', 'total')
+      .where('usage.user_address = :address', { address })
+      .getRawOne();
+
+    return result.total ? parseInt(result.total) : 0;
   }
 }

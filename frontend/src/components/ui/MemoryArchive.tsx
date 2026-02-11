@@ -2,7 +2,7 @@ import { format } from 'date-fns';
 import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { CATEGORY_COLORS, type LogTemplateCategory } from '@/data/logTemplates';
 import { cn } from '@/utils/cn';
-import { XCircle, List, Search } from 'lucide-react';
+import { XCircle, List, Search, Image as ImageIcon, FileText, Paperclip } from 'lucide-react';
 import { useState } from 'react';
 
 interface MemoryArchiveProps {
@@ -85,6 +85,24 @@ export function MemoryArchive({ onExit }: MemoryArchiveProps) {
                     <div className="text-xs text-white break-words pl-3 border-l-2 border-titanium-grey/30 group-hover:border-neon-cyan transition-colors py-1 leading-relaxed">
                         {log.content}
                     </div>
+
+                    {/* Attachment Icons based on Media Type */}
+                    {log.metadata?.attachments && log.metadata.attachments.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2 pl-3">
+                            {log.metadata.attachments.map((att, idx) => (
+                                <div key={idx} className="flex items-center gap-1.5 text-[10px] text-titanium-grey bg-white/5 px-2 py-1 rounded border border-titanium-grey/20 hover:border-neon-cyan/50 hover:text-white transition-colors cursor-help" title={`${att.name} (${att.type})`}>
+                                    {att.type.startsWith('image/') ? (
+                                        <ImageIcon size={12} className="text-neon-cyan" />
+                                    ) : att.type.includes('pdf') || att.type.includes('text') ? (
+                                        <FileText size={12} className="text-neon-purple" />
+                                    ) : (
+                                        <Paperclip size={12} />
+                                    )}
+                                    <span className="truncate max-w-[120px] font-mono">{att.name}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                     
                     {log.hash && (
                         <div className="text-[9px] text-titanium-grey/40 mt-2 font-mono text-right flex justify-end items-center gap-1">
