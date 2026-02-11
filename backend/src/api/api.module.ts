@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { FaucetController } from './faucet.controller';
 import { HiveController } from './hive.controller';
 import { MemoryController } from './memory.controller';
 import { ConstructController } from './construct.controller';
