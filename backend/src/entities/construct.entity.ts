@@ -1,6 +1,5 @@
 import { Entity, Column, PrimaryColumn, OneToMany, Index } from 'typeorm';
 import { MemoryShard } from './memory-shard.entity';
-import { NeuralBadge } from './neural-badge.entity';
 
 @Entity()
 export class Construct {
@@ -37,7 +36,4 @@ export class Construct {
 
   @OneToMany(() => MemoryShard, (shard) => shard.construct)
   shards: MemoryShard[];
-
-  @OneToMany(() => NeuralBadge, (badge) => badge.construct)
-  badges: NeuralBadge[];
 }

@@ -17,20 +17,23 @@ export class SuiService implements OnModuleInit {
   async onModuleInit() {
     const network = this.configService.get<string>('SUI_NETWORK', 'testnet');
     let nodeUrl = this.configService.get<string>('SUI_NODE_URL');
-    
+
     if (!nodeUrl) {
-        nodeUrl = getFullnodeUrl(network as 'mainnet' | 'testnet' | 'devnet' | 'localnet');
+      nodeUrl = getFullnodeUrl(
+        network as 'mainnet' | 'testnet' | 'devnet' | 'localnet',
+      );
     }
-    
+
     this.client = new SuiClient({ url: nodeUrl });
 
+    // Sponsor Key (Used for Gas Station)
     const privateKey = this.configService.get<string>('SUI_FAUCET_PRIVATE_KEY');
     if (privateKey) {
       try {
         const { secretKey } = decodeSuiPrivateKey(privateKey);
         this.signer = Ed25519Keypair.fromSecretKey(secretKey);
       } catch (e) {
-        this.logger.error('Failed to load faucet key', e);
+        this.logger.error('Failed to load sponsor key', e);
       }
     }
   }
@@ -41,23 +44,6 @@ export class SuiService implements OnModuleInit {
 
   getClient(): SuiClient {
     return this.client;
-  }
-
-  async transferSui(to: string, amount: number): Promise<string> {
-    if (!this.signer) {
-      throw new Error('Faucet signer not configured');
-    }
-
-    const tx = new TransactionBlock();
-    const [coin] = tx.splitCoins(tx.gas, [tx.pure(amount)]);
-    tx.transferObjects([coin], tx.pure(to));
-
-    const res = await this.client.signAndExecuteTransactionBlock({
-      signer: this.signer,
-      transactionBlock: tx,
-    });
-
-    return res.digest;
   }
 
   getPackageId(): string {

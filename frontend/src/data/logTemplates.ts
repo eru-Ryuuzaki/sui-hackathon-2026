@@ -98,9 +98,15 @@ export const LOG_TEMPLATES: Record<LogTemplateCategory, LogTemplateItem[]> = {
       type: "LEVEL_UP",
       icon: "🆙",
       msg: "Construct level increased with new capabilities.",
+      key: "levelup",
     },
-    { type: "TITLE", icon: "🏷️", msg: "Acquired new designation." },
-    { type: "BADGE", icon: "🏅", msg: "Neural Badge unlocked." },
+    {
+      type: "TITLE",
+      icon: "🏷️",
+      msg: "Acquired new designation.",
+      key: "title",
+    },
+    { type: "BADGE", icon: "🏅", msg: "Neural Badge unlocked.", key: "badge" },
   ],
   challenge: [
     { type: "VICTORY", icon: "✌️", msg: "Obstacle successfully overcome." },

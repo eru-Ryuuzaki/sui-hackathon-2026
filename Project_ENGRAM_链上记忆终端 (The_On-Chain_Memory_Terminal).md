@@ -94,16 +94,6 @@
   - 作为 Dynamic Object 挂载在 Construct 下。
   - **展示价值**：虽然不可交易，但用户可以生成一个只读的 `engram.link/u/subject_01` 页面，作为 Web3 时代的“人格证明”。
 
-#### 3.4 资产协议：灵魂绑定 (Soulbound Protocol)
-
-- **Construct (构造体)**：
-  - `struct Construct has key` (无 store)。
-  - **不可转移**。你的数字灵魂不能被买卖，只能被注销（Burn）。
-- **Neural Badges (神经徽章)**：
-  - `struct Badge has key` (无 store)。
-  - 作为 Dynamic Object 挂载在 Construct 下。
-  - **展示价值**：虽然不可交易，但用户可以生成一个只读的 `engram.link/u/subject_01` 页面，作为 Web3 时代的“人格证明”。
-
 #### 3.5 全球同步：蜂巢意识 (Hive Mind)
 
 - **功能**：展示全球 **Subject** 的实时活动。
