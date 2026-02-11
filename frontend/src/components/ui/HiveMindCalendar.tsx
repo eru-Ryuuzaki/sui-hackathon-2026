@@ -11,7 +11,7 @@ interface HiveMindCalendarProps {
   logs: MemoryLog[];
   // isOpen: boolean; // Removed unused
   // onClose: () => void; // Removed unused
-  onDateClick: (date: Date) => void;
+  onDateClick: (date: Date, logId?: string) => void;
 }
 
 export function HiveMindCalendar({ logs, onDateClick }: HiveMindCalendarProps) {
@@ -28,8 +28,13 @@ export function HiveMindCalendar({ logs, onDateClick }: HiveMindCalendarProps) {
     return () => clearInterval(interval);
   }, []);
 
-  // State for Tooltip Portal
-  const [hoveredLog, setHoveredLog] = useState<{ log: MemoryLog; rect: DOMRect } | null>(null);
+  // --- Sync Hovered Log with Carousel ---
+  // No explicit useEffect needed if we render derived from hoveredDate + globalTick
+  
+  // New State for Tooltip: Store the DATE being hovered, not the specific log
+  const [hoveredDate, setHoveredDate] = useState<{ date: Date; rect: DOMRect } | null>(null);
+
+  // ... (Update handlers below)
 
   // Derive calendar days
   const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
@@ -43,10 +48,19 @@ export function HiveMindCalendar({ logs, onDateClick }: HiveMindCalendarProps) {
     calendarDays.push(d);
   }
 
-  // Group logs by date
+  // Group logs by date (Using metadata.date if available, fallback to timestamp)
   const logsByDate = new Map<string, MemoryLog[]>();
   logs.forEach(log => {
-    const d = new Date(log.timestamp);
+    // Determine Date Source: Metadata > Timestamp
+    let d: Date;
+    if (log.metadata && log.metadata.date) {
+        // Handle "YYYY-MM-DD" string manually to avoid timezone issues with new Date()
+        const [y, m, day] = log.metadata.date.split('-').map(Number);
+        d = new Date(y, m - 1, day);
+    } else {
+        d = new Date(log.timestamp);
+    }
+    
     const key = format(d, 'yyyy-MM-dd');
     if (!logsByDate.has(key)) logsByDate.set(key, []);
     logsByDate.get(key)!.push(log);
@@ -109,13 +123,20 @@ export function HiveMindCalendar({ logs, onDateClick }: HiveMindCalendarProps) {
   return (
     <div 
       key={day.toString()}
-                onClick={() => onDateClick(day)}
-                onMouseEnter={(e) => {
+                onClick={() => {
+                    // Pass the active log ID if available, otherwise just the date
                     if (activeLog && isCurrentMonth) {
-                        setHoveredLog({ log: activeLog, rect: e.currentTarget.getBoundingClientRect() });
+                        onDateClick(day, activeLog.id);
+                    } else {
+                        onDateClick(day);
                     }
                 }}
-                onMouseLeave={() => setHoveredLog(null)}
+                onMouseEnter={(e) => {
+                    if (activeLog && isCurrentMonth) {
+                        setHoveredDate({ date: day, rect: e.currentTarget.getBoundingClientRect() });
+                    }
+                }}
+                onMouseLeave={() => setHoveredDate(null)}
                 className={cn(
                   "relative rounded transition-all duration-300 cursor-pointer group flex flex-col items-center justify-center border",
                   // Base Styles
@@ -162,26 +183,35 @@ export function HiveMindCalendar({ logs, onDateClick }: HiveMindCalendarProps) {
         </div>
 
         {/* Portal Tooltip */}
-        {hoveredLog && createPortal(
+        {hoveredDate && (() => {
+            const dateKey = format(hoveredDate.date, 'yyyy-MM-dd');
+            const logs = logsByDate.get(dateKey) || [];
+            const activeIndex = logs.length > 0 ? globalTick % logs.length : 0;
+            const currentLog = logs[activeIndex];
+            
+            if (!currentLog) return null;
+
+            return createPortal(
             <div 
                 className="fixed z-[9999] pointer-events-none w-40 p-2 bg-void-black/90 border border-neon-cyan/30 text-[10px] rounded shadow-[0_0_20px_rgba(0,0,0,0.8)] backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200"
                 style={{
-                    top: hoveredLog.rect.top - 10, // Just above the cell
-                    left: hoveredLog.rect.left + (hoveredLog.rect.width / 2),
+                    top: hoveredDate.rect.top - 10, // Just above the cell
+                    left: hoveredDate.rect.left + (hoveredDate.rect.width / 2),
                     transform: 'translate(-50%, -100%)'
                 }}
             >
                 <div className="flex justify-between items-center mb-1 border-b border-white/10 pb-1">
-                    <span className="text-neon-cyan font-bold font-mono">{format(new Date(hoveredLog.log.timestamp), 'HH:mm')}</span>
+                    <span className="text-neon-cyan font-bold font-mono">{format(new Date(currentLog.timestamp), 'HH:mm')}</span>
                     <span className="text-[8px] text-titanium-grey bg-white/10 px-1 rounded">LOG</span>
                 </div>
-                <div className="text-white leading-relaxed line-clamp-3">{hoveredLog.log.content}</div>
+                <div className="text-white leading-relaxed line-clamp-3">{currentLog.content}</div>
                 
                 {/* Tiny triangle pointer */}
                 <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-void-black border-r border-b border-neon-cyan/30 transform rotate-45" />
             </div>,
             document.body
-        )}
+            );
+        })()}
     </Card>
   );
 }

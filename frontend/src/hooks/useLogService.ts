@@ -43,6 +43,7 @@ const useMockLogService = () => {
       type: params.type as any,
       hash: `0xMOCK${Math.random().toString(16).slice(2, 10)}`,
       metadata: {
+        date: new Date().toISOString().split('T')[0], // REQUIRED
         mood: params.mood,
         isEncrypted: params.isEncrypted,
         // We can add more metadata here to match what the store expects

@@ -23,7 +23,7 @@ export interface MemoryLog {
     sentiment?: number; // Added sentiment/energy
     icon?: string;
     attachments?: LogAttachmentData[]; // Added attachments
-    date?: string;
+    date: string; // REQUIRED for Calendar sorting/rendering
     time?: string;
     isEncrypted?: boolean;
   };

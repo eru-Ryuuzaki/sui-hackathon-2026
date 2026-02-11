@@ -24,8 +24,26 @@ export function MemoryArchive({ onExit }: MemoryArchiveProps) {
   const { logs, setViewingLogId } = useMemoryStore();
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Sort logs by Date (Metadata > Timestamp)
+  const sortedLogs = logs.sort((a, b) => {
+    // Helper to get date object from log
+    const getDate = (log: typeof a) => {
+        if (log.metadata && log.metadata.date) {
+            const [y, m, d] = log.metadata.date.split('-').map(Number);
+            // Include time if available for precise sorting
+            if (log.metadata.time) {
+                const [h, min] = log.metadata.time.split(':').map(Number);
+                return new Date(y, m - 1, d, h, min).getTime();
+            }
+            return new Date(y, m - 1, d).getTime();
+        }
+        return log.timestamp;
+    };
+    return getDate(b) - getDate(a); // Descending order (Newest first)
+  });
+
   // Filter logs based on search term
-  const filteredLogs = logs.filter(log => 
+  const filteredLogs = sortedLogs.filter(log => 
     log.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
     log.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
     log.type.toLowerCase().includes(searchTerm.toLowerCase())

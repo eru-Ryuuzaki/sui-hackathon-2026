@@ -52,16 +52,24 @@ export function HiveMind() {
       <div className="h-[40%] min-h-[300px]">
         <HiveMindCalendar 
           logs={logs}
-          onDateClick={(date: Date) => {
-              console.log('Clicked date:', date);
-              // Find log for this date and trigger view
-              // For simplicity, we pick the first log of that date if multiple exist, 
-              // or handle the calendar click to show a mini-list then detail.
-              // Given the requirement "click logs item... click calendar icon", 
-              // we probably want to find the log associated with that specific point or day.
-              
-              // Find ANY log on this day to start with
+          onDateClick={(date: Date, logId?: string) => {
+              // If logId is provided (from specific icon click), use it directly
+              if (logId) {
+                  setViewingLogId(logId);
+                  return;
+              }
+
+              // Fallback: Find log for this date (if clicked empty space in cell or no logId passed)
+              // Match using Metadata Date first, then Timestamp
               const targetLog = logs.find(l => {
+                  if (l.metadata && l.metadata.date) {
+                      const [y, m, d] = l.metadata.date.split('-').map(Number);
+                      const logDate = new Date(y, m - 1, d);
+                      return logDate.getDate() === date.getDate() && 
+                             logDate.getMonth() === date.getMonth() && 
+                             logDate.getFullYear() === date.getFullYear();
+                  }
+                  // Timestamp Fallback
                   const d = new Date(l.timestamp);
                   return d.getDate() === date.getDate() && 
                          d.getMonth() === date.getMonth() && 

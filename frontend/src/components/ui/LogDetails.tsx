@@ -1,7 +1,13 @@
-import { useMemoryStore } from '@/hooks/useMemoryStore';
+import { useMemoryStore, type MemoryLog } from '@/hooks/useMemoryStore';
 import { parseLogTrace } from '@/utils/logHelpers';
 import { XCircle, Image as ImageIcon, Paperclip, Lock, Globe, Download, Eye } from 'lucide-react';
-import { CATEGORY_COLORS, type LogTemplateCategory } from '@/data/logTemplates';// Helper to separate header and body
+import { CATEGORY_COLORS, type LogTemplateCategory } from '@/data/logTemplates';
+
+// Define a type for Metadata that ensures properties exist if metadata itself exists
+// or we cast the empty object to a Partial<Metadata>
+type LogMetadata = NonNullable<MemoryLog['metadata']>;
+
+// Helper to separate header and body
 const splitContent = (content: string) => {
     const parts = content.split('\n\n');
     const header = parts[0];
@@ -28,9 +34,10 @@ export function LogDetails({ onExit }: { onExit: () => void }) {
   const { header, body } = splitContent(log.content);
   const parsedHeader = parseLogTrace(header);
   const categoryColor = CATEGORY_COLORS[log.category as LogTemplateCategory] || '#fff';
-  const metadata = log.metadata || {};
+  // Cast empty object to Partial<LogMetadata> to allow property access (which will be undefined)
+  const metadata = (log.metadata || {}) as Partial<LogMetadata>;
 
-  // Attachment Handler
+  // Attachment Handler - Safe access
   const primaryAttachment = metadata.attachments && metadata.attachments.length > 0 ? metadata.attachments[0] : null;
   const WALRUS_AGGREGATOR = "https://aggregator.walrus-testnet.walrus.space/v1";
 

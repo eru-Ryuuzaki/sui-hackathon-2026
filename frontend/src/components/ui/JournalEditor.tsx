@@ -113,7 +113,8 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
 
   // Current Category Color
   const categoryColor = CATEGORY_COLORS[category];
-  const validationError = validateDate();
+  // Strict Validation: Ensure Date is present
+  const validationError = !date ? "DATE REQUIRED" : validateDate();
   // Display template message if body is empty, ensuring preview is never blank
   // const displayBody = body || selectedTemplate?.msg || ''; // Removed old logic
   
@@ -657,18 +658,28 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
         isOpen={isSubmitWarningOpen}
         onClose={() => setIsSubmitWarningOpen(false)}
         title="CONFIRM NEURAL ENGRAVING"
-        className="max-w-md border-glitch-red/50 shadow-[0_0_50px_rgba(255,0,60,0.15)]"
+        className={cn(
+            "max-w-md shadow-[0_0_50px_rgba(0,0,0,0.3)] transition-colors duration-300",
+            isEncrypted 
+                ? "border-matrix-green/50 shadow-[0_0_50px_rgba(0,255,65,0.15)]" // Green for Encrypted
+                : "border-yellow-500/50 shadow-[0_0_50px_rgba(234,179,8,0.15)]"   // Yellow for Public
+        )}
     >
         <div className="space-y-4 font-mono">
-             <div className="text-xs text-titanium-grey border-l-2 border-glitch-red pl-2 py-1">
+             <div className={cn(
+                 "text-xs border-l-2 pl-2 py-1 transition-colors duration-300",
+                 isEncrypted 
+                    ? "text-matrix-green border-matrix-green" 
+                    : "text-yellow-500 border-yellow-500"
+             )}>
                 &gt; WARNING: IMMUTABLE ACTION DETECTED.<br/>
-                &gt; PLEASE REVIEW PROTOCOL PARAMETERS.
+                &gt; PRIVACY MODE: {isEncrypted ? "SECURE ENCRYPTED" : "PUBLIC BROADCAST"}
             </div>
 
             <div className="bg-white/5 border border-titanium-grey/20 p-3 rounded space-y-2 text-[10px]">
                 <div className="flex justify-between">
                     <span className="text-titanium-grey">PRIVACY PROTOCOL:</span>
-                    <span className={cn("font-bold", isEncrypted ? "text-matrix-green" : "text-neon-cyan")}>
+                    <span className={cn("font-bold", isEncrypted ? "text-matrix-green" : "text-yellow-500")}>
                         {isEncrypted ? "[ENCRYPTED]" : "[PUBLIC CHAIN]"}
                     </span>
                 </div>
@@ -713,7 +724,10 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
                 </button>
                 <button 
                     onClick={confirmUpload}
-                    className="bg-glitch-red text-white px-4 py-2 text-xs font-bold hover:bg-white hover:text-void-black transition-colors flex items-center gap-2"
+                    className={cn(
+                        "text-void-black px-4 py-2 text-xs font-bold hover:bg-white transition-colors flex items-center gap-2",
+                        isEncrypted ? "bg-matrix-green" : "bg-yellow-500"
+                    )}
                 >
                     <Activity size={12} /> ENGRAVE
                 </button>
