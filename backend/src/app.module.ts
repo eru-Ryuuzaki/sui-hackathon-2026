@@ -11,7 +11,6 @@ import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { Construct } from './entities/construct.entity';
 import { MemoryShard } from './entities/memory-shard.entity';
 import { EventCursor } from './entities/event-cursor.entity';
-import { SponsorshipUsage } from './entities/sponsorship-usage.entity';
 import { IndexerModule } from './indexer/indexer.module';
 import { SuiModule } from './sui/sui.module';
 import { ApiModule } from './api/api.module';
@@ -44,7 +43,7 @@ import { ApiModule } from './api/api.module';
             'engram_password',
           ),
           database: configService.get<string>('POSTGRES_DB', 'engram_db'),
-          entities: [Construct, MemoryShard, EventCursor, SponsorshipUsage],
+          entities: [Construct, MemoryShard, EventCursor],
           synchronize: true, // Auto-create tables (dev only)
         };
 

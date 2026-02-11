@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { useSignAndExecuteTransaction } from '@mysten/dapp-kit';
-import { useSponsoredTransaction } from '@/hooks/useSponsoredTransaction';
+import { useSignAndExecuteTransaction, useSuiClient } from '@mysten/dapp-kit';
 import { useUserStore } from '@/hooks/useUserStore';
 import { buildJackInTx } from '@/utils/sui/transactions';
 import type { TerminalLine } from '@/types/terminal';
@@ -20,7 +19,7 @@ export function useIdentityRegistration({
 }: UseIdentityRegistrationProps) {
     const [isRegistering, setIsRegistering] = useState(false);
     const { mutateAsync: signAndExecuteTransaction } = useSignAndExecuteTransaction();
-    const { executeSponsoredTx } = useSponsoredTransaction();
+    const client = useSuiClient();
     const { register, updateBirthday } = useUserStore();
 
     const handleIdentityConfirm = (codename: string, birthday: string) => {
@@ -56,22 +55,17 @@ export function useIdentityRegistration({
               
               let result;
 
-             // Try Sponsored first, then fallback
-             try {
-                 // Create specific transaction instance for sponsored attempt
-                 const sponsoredTx = buildJackInTx();
-                 result = await executeSponsoredTx(sponsoredTx);
-             } catch (e) {
-                 console.warn("Sponsored Jack-In failed, falling back to wallet", e);
-                 
-                 // Create FRESH transaction for wallet fallback to avoid reuse issues
-                 const walletTx = buildJackInTx();
-                 
-                 // Fallback to wallet
-                 result = await signAndExecuteTransaction({ 
-                     transaction: walletTx,
-                 });
-             }
+             // Direct execution (Self-funded)
+             const tx = buildJackInTx();
+             const txResult = await signAndExecuteTransaction({ 
+                 transaction: tx,
+             });
+
+             // Fetch full details to get events
+             result = await client.waitForTransaction({
+                 digest: txResult.digest,
+                 options: { showEvents: true }
+             });
              
              // Parse Result for Construct ID
              if (result && result.events) {

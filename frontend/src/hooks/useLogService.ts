@@ -1,8 +1,10 @@
-import { useCallback } from 'react';
-import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
-import { useSponsoredTransaction } from '@/hooks/useSponsoredTransaction';
-import { buildEngraveTx } from '@/utils/sui/transactions';
-import type { MemoryLog } from '@/hooks/useMemoryStore';
+import { useCallback } from "react";
+import {
+  useCurrentAccount,
+  useSignAndExecuteTransaction,
+} from "@mysten/dapp-kit";
+import { buildEngraveTx } from "@/utils/sui/transactions";
+import type { MemoryLog } from "@/hooks/useMemoryStore";
 
 // --- Types ---
 export interface LogParams {
@@ -27,47 +29,55 @@ export interface LogResult {
 }
 
 // --- Mock Implementation ---
-const MOCK_STORAGE_KEY = 'engram_mock_logs';
+const MOCK_STORAGE_KEY = "engram_mock_logs";
 
 const useMockLogService = () => {
-  const createLog = useCallback(async (params: LogParams): Promise<LogResult> => {
-    // 1. Simulate Network Delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+  const createLog = useCallback(
+    async (params: LogParams): Promise<LogResult> => {
+      // 1. Simulate Network Delay
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    // 2. Create Mock Log Object
-    const newLog: MemoryLog = {
-      id: Math.random().toString(36).substring(2, 9),
-      timestamp: Date.now(),
-      content: params.content,
-      category: params.category,
-      type: params.type as any,
-      hash: `0xMOCK${Math.random().toString(16).slice(2, 10)}`,
-      metadata: {
-        date: new Date().toISOString().split('T')[0], // REQUIRED
-        mood: params.mood,
-        isEncrypted: params.isEncrypted,
-        // We can add more metadata here to match what the store expects
-      }
-    };
+      // 2. Create Mock Log Object
+      const newLog: MemoryLog = {
+        id: Math.random().toString(36).substring(2, 9),
+        timestamp: Date.now(),
+        content: params.content,
+        category: params.category,
+        type: params.type as any,
+        hash: `0xMOCK${Math.random().toString(16).slice(2, 10)}`,
+        metadata: {
+          date: new Date().toISOString().split("T")[0], // REQUIRED
+          mood: params.mood,
+          isEncrypted: params.isEncrypted,
+          // We can add more metadata here to match what the store expects
+        },
+      };
 
-    // 3. Persist to LocalStorage (so it survives reload)
-    try {
-        const existing = JSON.parse(localStorage.getItem(MOCK_STORAGE_KEY) || '[]');
-        localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify([newLog, ...existing]));
-    } catch (e) {
+      // 3. Persist to LocalStorage (so it survives reload)
+      try {
+        const existing = JSON.parse(
+          localStorage.getItem(MOCK_STORAGE_KEY) || "[]",
+        );
+        localStorage.setItem(
+          MOCK_STORAGE_KEY,
+          JSON.stringify([newLog, ...existing]),
+        );
+      } catch (e) {
         console.error("Mock storage failed", e);
-    }
+      }
 
-    return { success: true, hash: newLog.hash, log: newLog };
-  }, []);
+      return { success: true, hash: newLog.hash, log: newLog };
+    },
+    [],
+  );
 
   const fetchLogs = useCallback(async (): Promise<MemoryLog[]> => {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      try {
-          return JSON.parse(localStorage.getItem(MOCK_STORAGE_KEY) || '[]');
-      } catch (e) {
-          return [];
-      }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      return JSON.parse(localStorage.getItem(MOCK_STORAGE_KEY) || "[]");
+    } catch (e) {
+      return [];
+    }
   }, []);
 
   return { createLog, fetchLogs, isMock: true };
@@ -76,8 +86,8 @@ const useMockLogService = () => {
 // --- Real Sui Implementation ---
 const useSuiLogService = () => {
   const account = useCurrentAccount();
-  const { mutateAsync: signAndExecuteTransaction } = useSignAndExecuteTransaction();
-  const { executeSponsoredTx } = useSponsoredTransaction();
+  const { mutateAsync: signAndExecuteTransaction } =
+    useSignAndExecuteTransaction();
 
   // Strict Map to Move Contract Enum (Duplicated from JournalEditor for now, should be shared)
   // 0:System, 1:Protocol, 2:Achievement, 3:Challenge, 4:Dream
@@ -90,53 +100,64 @@ const useSuiLogService = () => {
   };
 
   const MOOD_MAP: Record<string, number> = {
-     '😊': 75, '😐': 50, '😢': 25, '😡': 10, '🥳': 90,
-     '😴': 40, '🤢': 20, '🤯': 80, '🥶': 30, '🥵': 30
+    "😊": 75,
+    "😐": 50,
+    "😢": 25,
+    "😡": 10,
+    "🥳": 90,
+    "😴": 40,
+    "🤢": 20,
+    "🤯": 80,
+    "🥶": 30,
+    "🥵": 30,
   };
 
-  const createLog = useCallback(async (params: LogParams): Promise<LogResult> => {
-    if (!account) {
+  const createLog = useCallback(
+    async (params: LogParams): Promise<LogResult> => {
+      if (!account) {
         return { success: false, error: "Wallet not connected" };
-    }
+      }
 
-    try {
+      try {
         // Prepare Args
         const moodVal = MOOD_MAP[params.mood] || 50;
         const catVal = CATEGORY_MAP[params.category] ?? 1;
         const primaryAttachment = params.attachments?.[0];
 
         const tx = buildEngraveTx(
-            params.constructId,
-            params.content,
-            moodVal,
-            catVal,
-            params.isEncrypted,
-            primaryAttachment?.blobId,
-            primaryAttachment?.type
+          params.constructId,
+          params.content,
+          moodVal,
+          catVal,
+          params.isEncrypted,
+          primaryAttachment?.blobId,
+          primaryAttachment?.type,
         );
 
-        // Attempt Sponsored
+        // Direct Execution (Self-funded)
         try {
-           console.log('[SuiService] Attempting Sponsored Transaction...');
-           const res = await executeSponsoredTx(tx);
-           return { success: true, hash: res.digest };
-        } catch (sponsorErr) {
-           console.warn('[SuiService] Sponsored failed, falling back to self-pay:', sponsorErr);
-           // Fallback
-           const res = await signAndExecuteTransaction({ transaction: tx });
-           return { success: true, hash: res.digest };
+          console.log("[SuiService] Executing Transaction...");
+          const res = await signAndExecuteTransaction({ transaction: tx });
+          return { success: true, hash: res.digest };
+        } catch (e) {
+          console.error("[SuiService] Transaction failed:", e);
+          return { success: false, error: e };
         }
-    } catch (e) {
-        console.error('[SuiService] Transaction failed:', e);
+      } catch (e) {
+        console.error("[SuiService] Transaction build failed:", e);
         return { success: false, error: e };
-    }
-  }, [account, signAndExecuteTransaction, executeSponsoredTx]);
+      }
+    },
+    [account, signAndExecuteTransaction],
+  );
 
   const fetchLogs = useCallback(async (): Promise<MemoryLog[]> => {
-      // TODO: Implement Indexer/RPC fetch here
-      // For now, we return empty array or implement a real fetch later
-      console.warn("[SuiService] fetchLogs not fully implemented yet - relies on Indexer");
-      return [];
+    // TODO: Implement Indexer/RPC fetch here
+    // For now, we return empty array or implement a real fetch later
+    console.warn(
+      "[SuiService] fetchLogs not fully implemented yet - relies on Indexer",
+    );
+    return [];
   }, []);
 
   return { createLog, fetchLogs, isMock: false };
@@ -146,7 +167,7 @@ const useSuiLogService = () => {
 export function useLogService() {
   // Check Environment Variable
   // Note: Vite env vars are strings. 'true' checks string equality.
-  const useMock = import.meta.env.VITE_USE_MOCK === 'true';
+  const useMock = import.meta.env.VITE_USE_MOCK === "true";
   // const useMock = false; // Force Real Service for Testing
 
   if (useMock) {
