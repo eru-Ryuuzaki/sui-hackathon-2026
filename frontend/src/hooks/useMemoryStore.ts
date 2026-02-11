@@ -41,6 +41,7 @@ interface MemoryStore {
   clearLogs: () => void;
 }
 
+/*
 // Helper to generate mock logs
 const generateMockLogs = (count: number): MemoryLog[] => {
   const categories = [
@@ -108,6 +109,7 @@ const generateMockLogs = (count: number): MemoryLog[] => {
 
   return logs.sort((a, b) => b.timestamp - a.timestamp);
 };
+*/
 
 // Initial System Logs (Fixed + Random)
 const FIXED_LOGS: MemoryLog[] = [

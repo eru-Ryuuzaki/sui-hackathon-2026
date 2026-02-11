@@ -1,16 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
-import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
-import { useSponsoredTransaction } from '@/hooks/useSponsoredTransaction';
-import { buildJackInTx } from '@/utils/sui/transactions';
+import { useCurrentAccount } from '@mysten/dapp-kit';
 import { useUserStore } from '@/hooks/useUserStore';
 import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { cn } from '@/utils/cn';
 import { triggerAlert } from '@/components/ui/SystemAlert';
 
 import { MatrixRain } from '@/components/ui/MatrixRain';
-import { CyberAvatar } from '@/components/ui/CyberAvatar';
 import { JournalEditor } from '@/components/ui/JournalEditor';
 import { MemoryArchive } from '@/components/ui/MemoryArchive';
 import { LogDetails } from '@/components/ui/LogDetails';
@@ -19,18 +16,14 @@ import { Terminal as TerminalIcon, PlusSquare, Trash2, Activity, XCircle, List, 
 import { IdentityRegistrationModal } from '@/components/IdentityRegistrationModal';
 import { SettingsModal } from '@/components/SettingsModal';
 
-interface TerminalLine {
-  id: string;
-  type: 'system' | 'user' | 'error' | 'success';
-  content: React.ReactNode;
-}
+import { TerminalLine } from '@/types/terminal';
+import { useTerminalCommands } from '@/hooks/useTerminalCommands';
+import { useIdentityRegistration } from '@/hooks/useIdentityRegistration';
 
 export function Terminal() {
   const account = useCurrentAccount();
-  const { mutateAsync: signAndExecuteTransaction } = useSignAndExecuteTransaction();
-  const { executeSponsoredTx } = useSponsoredTransaction();
-  const { currentUser, login, register, updateBirthday } = useUserStore();
-  const { addLog, viewingLogId, setViewingLogId } = useMemoryStore();
+  const { currentUser, login } = useUserStore();
+  const { viewingLogId, setViewingLogId } = useMemoryStore();
   const [command, setCommand] = useState('');
   
   // Effective connection state (Wallet OR zkLogin)
@@ -45,12 +38,26 @@ export function Terminal() {
   const inputRef = useRef<HTMLInputElement>(null);
   
   // Login Flow State
-  const [isRegistering, setIsRegistering] = useState(false);
   const [showMatrix, setShowMatrix] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Mode State (CLI vs Journal vs Archive vs Detail)
   const [mode, setMode] = useState<'CLI' | 'JOURNAL' | 'ARCHIVE' | 'DETAIL'>('CLI');
+
+  // Custom Hooks
+  const { isRegistering, setIsRegistering, handleIdentityConfirm } = useIdentityRegistration({
+    setHistory,
+    setShowMatrix,
+    currentAddress
+  });
+
+  const { handleCommand, handleClear, handleStatus } = useTerminalCommands({
+    setHistory,
+    setCommand,
+    setMode,
+    isConnected,
+    currentAddress
+  });
 
   // Watch for viewingLogId to trigger Detail Mode
   useEffect(() => {
@@ -101,266 +108,6 @@ export function Terminal() {
       setShowMatrix(false);
     }
   }, [currentAddress]); // React to address changes (including zkLogin)
-
-  // --- Registration Callback ---
-  const handleIdentityConfirm = (codename: string, birthday: string) => {
-    // IMMEDIATE ACTION: Close Modal First
-    setIsRegistering(false);
-
-    // 1. Trigger Matrix Rain (Visual Metaphor for Upload)
-    setShowMatrix(true);
-    
-    // 2. Add System Logs (Scrolling effect)
-    const logs = [
-      `> CODENAME "${codename.toUpperCase()}" ACCEPTED.`,
-      `> ORIGIN DATE: ${birthday}`,
-      `> UPLOADING BIOMETRICS TO HIVE MIND...`,
-      `> SYNCING MEMORY SHARDS...`,
-      `> GENERATING DIGITAL AVATAR HASH...`
-    ];
-
-    let delay = 0;
-    logs.forEach(log => {
-      setTimeout(() => {
-        setHistory(prev => [...prev, { id: Math.random().toString(), type: 'system', content: log }]);
-      }, delay);
-      delay += 800;
-    });
-
-    // 3. Finalize Registration after logs
-    setTimeout(async () => {
-      let constructId: string | undefined;
-
-      try {
-         setHistory(prev => [...prev, { id: Math.random().toString(), type: 'system', content: `> INITIATING NEURAL LINK (JACK_IN)... PLEASE APPROVE.` }]);
-          
-          let result;
-
-         // Try Sponsored first, then fallback
-         try {
-             // Create specific transaction instance for sponsored attempt
-             const sponsoredTx = buildJackInTx();
-             result = await executeSponsoredTx(sponsoredTx);
-         } catch (e) {
-             console.warn("Sponsored Jack-In failed, falling back to wallet", e);
-             
-             // Create FRESH transaction for wallet fallback to avoid reuse issues
-             const walletTx = buildJackInTx();
-             
-             // Fallback to wallet
-             result = await signAndExecuteTransaction({ 
-                 transaction: walletTx,
-             });
-             // Note: Wallet might not return events depending on implementation, 
-             // but usually it returns the response.
-         }
-         
-         // Parse Result for Construct ID
-         if (result && result.events) {
-             const jackInEvent = result.events.find((e: any) => e.type.includes("SubjectJackedInEvent"));
-             if (jackInEvent && jackInEvent.parsedJson) {
-                 constructId = (jackInEvent.parsedJson as any).construct_id;
-             }
-         }
-
-         if (constructId) {
-             setHistory(prev => [...prev, { id: Math.random().toString(), type: 'success', content: `> NEURAL LINK ESTABLISHED. CONSTRUCT ID: ${constructId.slice(0,8)}...` }]);
-         } else {
-             // If we couldn't find ID (maybe wallet didn't return events), we are in trouble.
-             // We could try to fetch the transaction again if we have the digest?
-             // But for now, let's warn.
-             setHistory(prev => [...prev, { id: Math.random().toString(), type: 'error', content: `> WARNING: COULD NOT VERIFY CONSTRUCT ID. USING SIMULATION MODE.` }]);
-         }
-
-      } catch (e) {
-         console.error("Jack In Failed", e);
-         setHistory(prev => [...prev, { id: Math.random().toString(), type: 'error', content: `> NEURAL LINK FAILED. OFFLINE MODE ACTIVATED.` }]);
-      }
-
-      // Update Store
-      register(currentAddress!, codename, constructId);
-      updateBirthday(currentAddress!, birthday);
-
-      // Show Avatar in Terminal
-      setHistory(prev => [
-        ...prev, 
-        { 
-          id: Math.random().toString(), 
-          type: 'system', 
-          content: (
-            <div className="flex items-center gap-4 my-2 p-2 border border-neon-cyan bg-neon-cyan/10 rounded shadow-[0_0_15px_rgba(0,243,255,0.3)]">
-              <CyberAvatar seed={currentAddress!} size={64} glitch={false} className="border-neon-cyan" />
-              <div className="text-xs">
-                <div className="text-neon-cyan font-bold">AVATAR GENERATED</div>
-                <div className="text-titanium-grey font-mono text-[10px]">{currentAddress!.slice(0, 16)}...</div>
-              </div>
-            </div>
-          ) 
-        },
-        { id: Math.random().toString(), type: 'success', content: `> WELCOME TO THE VOID, ${codename.toUpperCase()}.` },
-        { id: Math.random().toString(), type: 'system', content: `> TYPE 'HELP' TO BEGIN.` }
-      ]);
-      
-      setTimeout(() => setShowMatrix(false), 5000); // Fade out matrix rain
-    }, delay + 1000);
-  };
-
-  const handleCommand = (cmd: string) => {
-    if (!cmd.trim()) return;
-
-    // Add user command to history
-    const userLine: TerminalLine = {
-      id: Math.random().toString(),
-      type: 'user',
-      content: cmd
-    };
-    
-    setHistory(prev => [...prev, userLine]);
-    setCommand('');
-
-    // NOTE: Old registration intercept logic removed since we use Modal now
-
-    // Normal Command Processing
-    const args = cmd.trim().split(' ');
-    const mainCmd = args[0].toLowerCase();
-
-    setTimeout(() => {
-      let response: TerminalLine;
-
-      switch (mainCmd) {
-        case 'help':
-          response = {
-            id: Math.random().toString(),
-            type: 'system',
-            content: (
-              <div className="space-y-1">
-                <div>Available commands:</div>
-                <div className="pl-4 text-neon-cyan">log             - Open Trace Logger</div>
-                <div className="pl-4 text-neon-cyan">engrave &lt;message&gt; - Record a memory shard</div>
-                <div className="pl-4 text-neon-cyan">clear             - Clear terminal history</div>
-                <div className="pl-4 text-neon-cyan">status            - Check construct status</div>
-                <div className="pl-4 text-neon-cyan">whoami            - Show current subject info</div>
-                <div className="pl-4 text-neon-cyan">reroll            - Regenerate avatar (legacy)</div>
-                <div className="pl-4 text-neon-cyan">help              - Show this message</div>
-              </div>
-            )
-          };
-          break;
-        
-        case 'log':
-        case 'diary':
-           if (!isConnected) {
-             response = { id: Math.random().toString(), type: 'error', content: 'Access Denied. Connect wallet to log trace.' };
-           } else {
-             setMode('JOURNAL');
-             return; // Don't add response to history yet
-           }
-           break;
-
-        case 'clear':
-          setHistory([]);
-          return;
-        
-        case 'reroll':
-           if (!isConnected) {
-             response = { id: Math.random().toString(), type: 'error', content: 'Connect wallet first.' };
-           } else {
-             response = { id: Math.random().toString(), type: 'system', content: 'Initiating avatar reconfiguration...' };
-             // Legacy command support, better use HUD
-           }
-           break;
-
-        case 'whoami':
-           if (!isConnected || !currentUser) {
-             response = { id: Math.random().toString(), type: 'error', content: 'You are an unidentified signal. Please connect.' };
-           } else {
-             response = { id: Math.random().toString(), type: 'system', content: `> SUBJECT: ${currentUser.codename} (ADDR: ${currentAddress?.slice(0,6)}...)` };
-           }
-           break;
-
-        case 'engrave':
-          if (!isConnected) {
-             response = { id: Math.random().toString(), type: 'error', content: 'ERROR: Neural Link Disconnected. Please connect wallet first.' };
-          } else if (args.length < 2) {
-             response = { id: Math.random().toString(), type: 'error', content: 'Usage: engrave <your memory here>' };
-          } else {
-             const memoryContent = args.slice(1).join(' ');
-             addLog({
-                content: memoryContent,
-                category: 'CLI_UPLOAD',
-                type: 'INFO'
-             });
-             
-             response = { 
-               id: Math.random().toString(), 
-               type: 'success', 
-               content: `[SYNC] Memory Shard engraved to Hive Mind.` 
-             };
-             
-             triggerAlert({
-                type: 'success',
-                title: 'MEMORY ENGRAVED',
-                message: 'Shard successfully uploaded to Hive Mind via Neural Link.',
-                duration: 3000
-             });
-          }
-          break;
-
-        case 'status':
-           if (!isConnected) {
-             response = { id: Math.random().toString(), type: 'error', content: 'Offline.' };
-           } else {
-             response = { id: Math.random().toString(), type: 'system', content: `Construct Active. Owner: ${currentAddress}` };
-           }
-           break;
-
-        default:
-          response = {
-            id: Math.random().toString(),
-            type: 'error',
-            content: `Command not found: ${mainCmd}. Type 'help' for available commands.`
-          };
-      }
-
-      setHistory(prev => [...prev, response]);
-    }, 300); 
-  };
-
-  const handleClear = () => {
-     setHistory([
-       { id: Math.random().toString(), type: 'system', content: '> TERMINAL BUFFER CLEARED.' }
-     ]);
-     triggerAlert({
-       type: 'info',
-       title: 'BUFFER CLEARED',
-       message: 'Local terminal history has been wiped.',
-       duration: 2000
-     });
-  };
-
-  const handleStatus = () => {
-     if (!isConnected) {
-        triggerAlert({ type: 'error', title: 'OFFLINE', message: 'Neural Link Disconnected.' });
-        return;
-     }
-     
-     const statusLine = { 
-       id: Math.random().toString(), 
-       type: 'system', 
-       content: (
-         <div className="p-2 border border-neon-cyan/30 bg-neon-cyan/5 rounded text-xs font-mono space-y-1">
-            <div className="font-bold text-neon-cyan mb-2">=== SYSTEM STATUS REPORT ===</div>
-            <div>STATUS: <span className="text-matrix-green">ONLINE</span></div>
-            <div>USER: {currentUser?.codename || 'UNKNOWN'}</div>
-            <div>ADDR: {currentAddress}</div>
-            <div>MEMORY SHARDS: {useMemoryStore.getState().logs.length}</div>
-            <div>SYNC_RATE: 100%</div>
-         </div>
-       ) 
-     } as TerminalLine;
-
-     setHistory(prev => [...prev, statusLine]);
-  };
 
   return (
     <>
@@ -516,7 +263,7 @@ export function Terminal() {
                 >
                   <JournalEditor 
                     onExit={() => setMode('CLI')} 
-                    constructId={currentUser?.constructId} // Pass constructId from currentUser
+                    constructId={currentUser?.constructId} 
                   />
                 </motion.div>
               ) : mode === 'ARCHIVE' ? (

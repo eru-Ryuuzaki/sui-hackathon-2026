@@ -121,7 +121,7 @@ export function useGlobalHiveMind() {
         const userPrefix = `[USER-${Math.floor(Math.random() * 9999)}]`;
         
         // 10% chance it's a "new user" event for stats simulation
-        const isNewUser = Math.random() > 0.9;
+        // const isNewUser = Math.random() > 0.9;
         
         // Format Content for LogDetails Parsing
         const dateStr = new Date().toISOString().split('T')[0];
