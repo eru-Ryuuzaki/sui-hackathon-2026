@@ -2,8 +2,10 @@ import { useCallback } from "react";
 import {
   useCurrentAccount,
   useSignAndExecuteTransaction,
+  useSignPersonalMessage,
 } from "@mysten/dapp-kit";
 import { buildEngraveTx } from "@/utils/sui/transactions";
+import { deriveKeyFromSignature, encryptText } from "@/utils/encryption";
 import type { MemoryLog } from "@/hooks/useMemoryStore";
 
 // --- Types ---
@@ -88,6 +90,7 @@ const useSuiLogService = () => {
   const account = useCurrentAccount();
   const { mutateAsync: signAndExecuteTransaction } =
     useSignAndExecuteTransaction();
+  const { mutateAsync: signPersonalMessage } = useSignPersonalMessage();
 
   // Strict Map to Move Contract Enum (Duplicated from JournalEditor for now, should be shared)
   // 0:System, 1:Protocol, 2:Achievement, 3:Challenge, 4:Dream
@@ -123,10 +126,44 @@ const useSuiLogService = () => {
         const moodVal = MOOD_MAP[params.mood] || 50;
         const catVal = CATEGORY_MAP[params.category] ?? 1;
         const primaryAttachment = params.attachments?.[0];
+        let finalContent = params.content;
+
+        // --- Encryption Logic ---
+        if (params.isEncrypted) {
+          console.log("[SuiService] Encrypting content...");
+          try {
+            // 1. Request Signature to derive key
+            const msgBytes = new TextEncoder().encode(
+              "ENGRAM_ACCESS_KEY_DERIVATION",
+            );
+            const { signature } = await signPersonalMessage({
+              message: msgBytes,
+            });
+
+            // 2. Derive Key
+            const key = await deriveKeyFromSignature(signature);
+
+            // 3. Encrypt Content
+            const { encryptedText, iv } = await encryptText(
+              params.content,
+              key,
+            );
+
+            // 4. Pack IV and Ciphertext: "IV_BASE64:CIPHER_BASE64"
+            // This allows us to store both in the single 'content' string on-chain
+            finalContent = `${iv}:${encryptedText}`;
+          } catch (err) {
+            console.error("[SuiService] Encryption failed or rejected:", err);
+            return {
+              success: false,
+              error: "Encryption failed or rejected by user",
+            };
+          }
+        }
 
         const tx = buildEngraveTx(
           params.constructId,
-          params.content,
+          finalContent,
           moodVal,
           catVal,
           params.isEncrypted,

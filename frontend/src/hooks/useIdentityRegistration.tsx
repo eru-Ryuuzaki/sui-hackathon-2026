@@ -18,13 +18,24 @@ export function useIdentityRegistration({
     currentAddress
 }: UseIdentityRegistrationProps) {
     const [isRegistering, setIsRegistering] = useState(false);
+    const [showFeeModal, setShowFeeModal] = useState(false);
+    const [pendingData, setPendingData] = useState<{codename: string, birthday: string} | null>(null);
+    
     const { mutateAsync: signAndExecuteTransaction } = useSignAndExecuteTransaction();
     const client = useSuiClient();
     const { register, updateBirthday } = useUserStore();
 
     const handleIdentityConfirm = (codename: string, birthday: string) => {
-        // IMMEDIATE ACTION: Close Modal First
+        setPendingData({ codename, birthday });
         setIsRegistering(false);
+        setShowFeeModal(true);
+    };
+
+    const handleFeeConfirm = () => {
+        if (!pendingData) return;
+        const { codename, birthday } = pendingData;
+        
+        setShowFeeModal(false);
 
         // 1. Trigger Matrix Rain (Visual Metaphor for Upload)
         setShowMatrix(true);
@@ -119,6 +130,9 @@ export function useIdentityRegistration({
     return {
         isRegistering,
         setIsRegistering,
-        handleIdentityConfirm
+        showFeeModal,
+        setShowFeeModal,
+        handleIdentityConfirm,
+        handleFeeConfirm
     };
 }

@@ -207,7 +207,10 @@ export function HiveMind() {
           </div>
           
           <div className="space-y-3 overflow-hidden flex-1 min-h-0 mask-image-gradient-b p-3 pt-2">
-             {globalLogs.slice(0, 3).map((log, index) => { // Use GLOBAL logs here, limited to 3
+             {globalLogs
+                .filter(log => log.metadata?.visibility === 'public')
+                .slice(0, 3)
+                .map((log, index) => { // Use GLOBAL logs here, limited to 3
                // Visual Card Styles
                const isNewest = index === 0;
                

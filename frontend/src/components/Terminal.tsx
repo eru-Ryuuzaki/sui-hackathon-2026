@@ -14,6 +14,7 @@ import { LogDetails } from '@/components/ui/LogDetails';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Terminal as TerminalIcon, PlusSquare, Trash2, Activity, XCircle, List, Settings } from 'lucide-react';
 import { IdentityRegistrationModal } from '@/components/IdentityRegistrationModal';
+import { RegistrationFeeModal } from '@/components/RegistrationFeeModal';
 import { SettingsModal } from '@/components/SettingsModal';
 
 import type { TerminalLine } from '@/types/terminal';
@@ -45,7 +46,14 @@ export function Terminal() {
   const [mode, setMode] = useState<'CLI' | 'JOURNAL' | 'ARCHIVE' | 'DETAIL'>('CLI');
 
   // Custom Hooks
-  const { isRegistering, setIsRegistering, handleIdentityConfirm } = useIdentityRegistration({
+  const { 
+    isRegistering, 
+    setIsRegistering, 
+    showFeeModal, 
+    setShowFeeModal, 
+    handleIdentityConfirm, 
+    handleFeeConfirm 
+  } = useIdentityRegistration({
     setHistory,
     setShowMatrix,
     currentAddress
@@ -123,17 +131,24 @@ export function Terminal() {
           (account ? `${account.address.slice(0, 4)}...${account.address.slice(-4)}` : '') // New Logic: 0x12...3456
         }
       />
+
+      {/* Registration Fee Warning Modal */}
+      <RegistrationFeeModal 
+        isOpen={showFeeModal}
+        onClose={() => setShowFeeModal(false)}
+        onConfirm={handleFeeConfirm}
+      />
       
       {/* Settings Modal */}
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
 
       <main className={cn(
         "lg:col-span-6 flex flex-col h-full min-h-0 transition-all duration-500 perspective-1000",
-        isRegistering ? "z-40" : "z-auto" // Reduced Z since Modal is on top
+        (isRegistering || showFeeModal) ? "z-40" : "z-auto" // Reduced Z since Modal is on top
       )}>
         <Card className={cn(
           "flex-1 flex flex-col h-full overflow-hidden transition-all duration-500 relative",
-          isRegistering ? "blur-sm scale-95 opacity-50" : "" // Blur background when modal open
+          (isRegistering || showFeeModal) ? "blur-sm scale-95 opacity-50" : "" // Blur background when modal open
         )}>
            {/* Action Bar (Top) */}
            <div className="flex items-center justify-between p-2 border-b border-titanium-grey/20 bg-white/5 shrink-0">
@@ -232,7 +247,7 @@ export function Terminal() {
                         placeholder={
                           !isConnected ? "Connect wallet to start..." : "Enter command..."
                         }
-                        disabled={!isConnected || isRegistering} 
+                        disabled={!isConnected || isRegistering || showFeeModal} 
                         prefixText={
                            !isConnected ? "guest@engram:~$" :
                            isRegistering ? "identity@protocol:~$" :

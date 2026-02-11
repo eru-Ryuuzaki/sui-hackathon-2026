@@ -61,6 +61,45 @@ export async function decryptFile(encryptedBlob: Blob, key: CryptoKey, iv: Uint8
   return new Blob([decryptedBuffer], { type: originalType });
 }
 
+// 4. Encrypt Text
+export async function encryptText(text: string, key: CryptoKey): Promise<{ encryptedText: string; iv: string }> {
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const enc = new TextEncoder();
+  const encodedText = enc.encode(text);
+
+  const encryptedBuffer = await window.crypto.subtle.encrypt(
+    {
+      name: "AES-GCM",
+      iv: iv,
+    },
+    key,
+    encodedText
+  );
+
+  return {
+    encryptedText: arrayBufferToBase64(encryptedBuffer),
+    iv: arrayBufferToBase64(iv)
+  };
+}
+
+// 5. Decrypt Text
+export async function decryptText(encryptedText: string, iv: string, key: CryptoKey): Promise<string> {
+  const encryptedBuffer = base64ToUint8Array(encryptedText);
+  const ivBuffer = base64ToUint8Array(iv);
+
+  const decryptedBuffer = await window.crypto.subtle.decrypt(
+    {
+      name: "AES-GCM",
+      iv: ivBuffer as BufferSource,
+    },
+    key,
+    encryptedBuffer as BufferSource
+  );
+
+  const dec = new TextDecoder();
+  return dec.decode(decryptedBuffer);
+}
+
 // Helper: Convert IV to Base64 for storage
 export function arrayBufferToBase64(buffer: ArrayBuffer | Uint8Array): string {
   let binary = '';

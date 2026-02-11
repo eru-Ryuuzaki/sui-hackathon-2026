@@ -49,7 +49,8 @@ const useGlobalStore = create<GlobalHiveStore>((set, get) => ({
             sentiment: 75, // Mapped from 😊
             icon: '😊',
             isEncrypted: false,
-            attachments: []
+            attachments: [],
+            visibility: 'public'
         }
       },
       {
@@ -66,7 +67,8 @@ const useGlobalStore = create<GlobalHiveStore>((set, get) => ({
             sentiment: 50, // Mapped from 🤔
             icon: '🤔',
             isEncrypted: false,
-            attachments: []
+            attachments: [],
+            visibility: 'public'
         }
       }
     ];
@@ -145,7 +147,8 @@ export function useGlobalHiveMind() {
               sentiment: sentiment,
               icon: icon,
               isEncrypted: false,
-              attachments: []
+              attachments: [],
+              visibility: 'public'
           }
         };
 

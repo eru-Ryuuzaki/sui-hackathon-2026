@@ -26,6 +26,7 @@ export interface MemoryLog {
     date: string; // REQUIRED for Calendar sorting/rendering
     time?: string;
     isEncrypted?: boolean;
+    visibility?: "public" | "private";
   };
   hash: string; // Simulated tx hash
 }
@@ -48,7 +49,7 @@ const generateMockLogs = (count: number): MemoryLog[] => {
 
   const mockData = [
     {
-      offsetHours: -2,
+      offsetHours: -75, // 3 days ago +
       category: "protocol",
       type: "INFO",
       icon: "🔄",
@@ -59,7 +60,7 @@ const generateMockLogs = (count: number): MemoryLog[] => {
       hash: "0xa1b2...c3d4",
     },
     {
-      offsetHours: -25, // Yesterday
+      offsetHours: -98, // 4 days ago
       category: "dream",
       type: "WARN",
       icon: "💤",
@@ -71,7 +72,7 @@ const generateMockLogs = (count: number): MemoryLog[] => {
       hash: "0xe5f6...g7h8",
     },
     {
-      offsetHours: -48, // 2 days ago
+      offsetHours: -121, // 5 days ago
       category: "achievement",
       type: "SUCCESS",
       icon: "🏆",
@@ -83,7 +84,7 @@ const generateMockLogs = (count: number): MemoryLog[] => {
       hash: "0xi9j0...k1l2",
     },
     {
-      offsetHours: -72,
+      offsetHours: -145,
       category: "system",
       type: "ERROR",
       icon: "⚡",
@@ -94,7 +95,7 @@ const generateMockLogs = (count: number): MemoryLog[] => {
       hash: "0xm3n4...o5p6",
     },
     {
-      offsetHours: -96,
+      offsetHours: -169,
       category: "challenge",
       type: "INFO",
       icon: "⚔️",
@@ -135,6 +136,7 @@ const generateMockLogs = (count: number): MemoryLog[] => {
         weather: data.weather,
         isEncrypted: false,
         sentiment: data.sentiment,
+        visibility: "public",
       },
     };
   });
@@ -144,19 +146,22 @@ const generateMockLogs = (count: number): MemoryLog[] => {
 const FIXED_LOGS: MemoryLog[] = [
   {
     id: "sys-001",
-    timestamp: Date.now() - 100000,
-    content: `[2026-02-11 09:00][SYSTEM]SUCCESS: ✅ ENGRAM KERNEL INITIALIZED. Neural Link established.\n\nAll systems nominal. Neural interface active. Waiting for user input. (MOCK_DATA: Demo Purpose Only)`,
+    timestamp: Date.now() - 3 * 24 * 60 * 60 * 1000 - 100000, // 3 days ago
+    content: `[${new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]} 09:00][SYSTEM]SUCCESS: ✅ ENGRAM KERNEL INITIALIZED. Neural Link established.\n\nAll systems nominal. Neural interface active. Waiting for user input. (MOCK_DATA: Demo Purpose Only)`,
     category: "system",
     type: "SUCCESS",
     hash: "0x0000000000000000",
     metadata: {
-      date: new Date().toISOString().split("T")[0],
+      date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0],
       time: "09:00",
       icon: "✅",
       mood: "😊",
       weather: "☀️",
       isEncrypted: false,
       sentiment: 90,
+      visibility: "public",
     },
   },
 ];
@@ -190,7 +195,7 @@ export const useMemoryStore = create<MemoryStore>()(
       clearLogs: () => set({ logs: [] }),
     }),
     {
-      name: "engram_memory_store_v7", // Updated version to invalidate old cache and load new mocks
+      name: "engram_memory_store_v8", // Updated version to invalidate old cache and load new mocks
     },
   ),
 );
