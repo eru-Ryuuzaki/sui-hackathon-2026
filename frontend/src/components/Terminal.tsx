@@ -16,7 +16,7 @@ import { Terminal as TerminalIcon, PlusSquare, Trash2, Activity, XCircle, List, 
 import { IdentityRegistrationModal } from '@/components/IdentityRegistrationModal';
 import { SettingsModal } from '@/components/SettingsModal';
 
-import { TerminalLine } from '@/types/terminal';
+import type { TerminalLine } from '@/types/terminal';
 import { useTerminalCommands } from '@/hooks/useTerminalCommands';
 import { useIdentityRegistration } from '@/hooks/useIdentityRegistration';
 

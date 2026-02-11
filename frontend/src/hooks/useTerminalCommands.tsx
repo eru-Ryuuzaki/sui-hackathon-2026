@@ -1,4 +1,4 @@
-import { TerminalLine } from '@/types/terminal';
+import type { TerminalLine } from '@/types/terminal';
 import { useUserStore } from '@/hooks/useUserStore';
 import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { triggerAlert } from '@/components/ui/SystemAlert';

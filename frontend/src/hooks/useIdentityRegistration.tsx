@@ -3,7 +3,7 @@ import { useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { useSponsoredTransaction } from '@/hooks/useSponsoredTransaction';
 import { useUserStore } from '@/hooks/useUserStore';
 import { buildJackInTx } from '@/utils/sui/transactions';
-import { TerminalLine } from '@/types/terminal';
+import type { TerminalLine } from '@/types/terminal';
 import { CyberAvatar } from '@/components/ui/CyberAvatar';
 import React from 'react';
 
