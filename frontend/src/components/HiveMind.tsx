@@ -12,9 +12,30 @@ const getSummary = (content: string) => {
   return parts[0];
 };
 
+// Mood Color Configuration
+const MOOD_COLOR_CONFIG: Record<string, { bg: string, border: string, shadow: string, hex: string }> = {
+    '😊': { bg: 'bg-matrix-green', border: 'border-matrix-green/40', shadow: 'shadow-matrix-green/20', hex: '#00ff41' },
+    '🥳': { bg: 'bg-acid-yellow', border: 'border-acid-yellow/40', shadow: 'shadow-acid-yellow/20', hex: '#f0ff00' },
+    '🤯': { bg: 'bg-neon-purple', border: 'border-neon-purple/40', shadow: 'shadow-neon-purple/20', hex: '#bc13fe' },
+    '😡': { bg: 'bg-glitch-red', border: 'border-glitch-red/40', shadow: 'shadow-glitch-red/20', hex: '#ff003c' },
+    '😢': { bg: 'bg-cyber-blue', border: 'border-cyber-blue/40', shadow: 'shadow-cyber-blue/20', hex: '#0077ff' },
+    '🤢': { bg: 'bg-bio-lime', border: 'border-bio-lime/40', shadow: 'shadow-bio-lime/20', hex: '#ccff00' },
+    '🥵': { bg: 'bg-neon-orange', border: 'border-neon-orange/40', shadow: 'shadow-neon-orange/20', hex: '#ff9e00' },
+    '🥶': { bg: 'bg-cyber-blue', border: 'border-cyber-blue/40', shadow: 'shadow-cyber-blue/20', hex: '#0077ff' },
+    '🤔': { bg: 'bg-neon-cyan', border: 'border-neon-cyan/30', shadow: 'shadow-neon-cyan/10', hex: '#00f3ff' },
+    '😐': { bg: 'bg-titanium-grey', border: 'border-titanium-grey/30', shadow: 'shadow-titanium-grey/10', hex: '#8a8a8a' },
+    '😴': { bg: 'bg-titanium-grey', border: 'border-titanium-grey/30', shadow: 'shadow-titanium-grey/10', hex: '#8a8a8a' },
+    'default': { bg: 'bg-neon-cyan', border: 'border-neon-cyan/30', shadow: 'shadow-neon-cyan/10', hex: '#00f3ff' }
+};
+
+const getMoodConfig = (mood: string | undefined) => {
+    return MOOD_COLOR_CONFIG[mood || ''] || MOOD_COLOR_CONFIG['default'];
+};
+
 export function HiveMind() {
   const { logs, setViewingLogId } = useMemoryStore(); // Local logs for Calendar
-  const { globalLogs } = useGlobalHiveMind(); // Global logs for Feed
+  const { globalLogs, stats } = useGlobalHiveMind(); // Global logs for Feed
+  const [hoveredLogId, setHoveredLogId] = useState<string | null>(null);
 
   // Merge Local Logs with Global Logs for Detail View Lookup
   // When setViewingLogId is called with a global log ID, LogDetails needs to be able to find it.
@@ -68,7 +89,7 @@ export function HiveMind() {
 
   // Watch for new GLOBAL logs to trigger pulse (Global Hive Mind)
   useEffect(() => {
-    if (globalLogs.length > 0) {
+    if (globalLogs.length > 0 && !hoveredLogId) {
       const latest = globalLogs[0];
       const emoji = latest.metadata?.mood || '🤔';
       const mood = ['😡', '🤯', '🤢'].includes(emoji)
@@ -76,7 +97,7 @@ export function HiveMind() {
         : ['🥳', '😊', '🤩'].includes(emoji)
         ? 'creative'
         : 'calm';
-      // Pulse logic is already handled by the mood in globalLogs, but we trigger the animation here
+      
       setPulse({ active: true, intensity: 60 + Math.random() * 30, mood }); 
 
       const timer = setTimeout(() => {
@@ -84,7 +105,34 @@ export function HiveMind() {
       }, 500); 
       return () => clearTimeout(timer);
     }
-  }, [globalLogs]);
+  }, [globalLogs, hoveredLogId]);
+  
+  // Derived state for Oscilloscope
+  const activeLog = hoveredLogId 
+    ? globalLogs.find(l => l.id === hoveredLogId) 
+    : globalLogs[0];
+    
+  const scopeMood = activeLog?.metadata?.mood 
+    ? (['😡', '🤯', '🤢'].includes(activeLog.metadata.mood) ? 'alert' 
+       : ['🥳', '😊', '🤩'].includes(activeLog.metadata.mood) ? 'creative' 
+       : 'calm')
+    : 'calm';
+
+  const scopeIntensity = activeLog?.metadata?.sentiment || 50;
+
+  // Calculate Scope Color based on Mood
+  const scopeConfig = getMoodConfig(activeLog?.metadata?.mood);
+  const scopeColor = scopeConfig.hex;
+  
+  // Combine automatic pulse with hover state
+  const isHovering = !!hoveredLogId;
+  const currentMood = isHovering ? scopeMood : pulse.mood;
+  // If hovering, intensity is constant high-ish based on sentiment. If not, it follows the pulse decay.
+  const currentIntensity = isHovering ? scopeIntensity : pulse.intensity;
+  const isActive = isHovering ? true : pulse.active;
+
+  // ... (rest of code)
+
 
   // Convert logs for Calendar (Still uses LOCAL logs as Calendar is personal)
   // const calendarLogs = logs.map(log => ({
@@ -137,16 +185,24 @@ export function HiveMind() {
       <Card className="flex-1 flex flex-col overflow-hidden relative min-h-0 p-0">
           {/* Header with Pulse */}
           <div className="shrink-0 relative">
-             <div className="absolute top-2 left-3 z-10 flex items-center gap-2">
-                <h2 className="text-sm font-bold text-titanium-grey tracking-widest flex items-center gap-2 bg-void-black/80 px-2 py-1 rounded backdrop-blur-sm border border-titanium-grey/20">
-                  <span className="w-2 h-2 bg-matrix-green rounded-full animate-pulse" />
-                  HIVE MIND FEED
-                </h2>
+             {/* Stats Display - Replaces Title */}
+             <div className="absolute top-2 left-3 z-10 flex gap-2 text-[10px] font-bold font-mono tracking-widest text-titanium-grey bg-void-black/80 px-3 py-1.5 rounded backdrop-blur-sm border border-titanium-grey/20">
+                <div className="flex items-center gap-1.5">
+                   <span className="text-matrix-green text-[8px] animate-pulse">●</span>
+                   <span className="text-matrix-green/90">USERS: {stats.totalSubjects}</span>
+                </div>
+                <div className="w-[1px] h-3 bg-titanium-grey/20 self-center"></div>
+                <div className="flex items-center gap-1.5">
+                   <span className="text-neon-cyan text-[8px]">▲</span>
+                   <span className="text-neon-cyan/90">SHARDS: {stats.totalShards}</span>
+                </div>
              </div>
+
              <NeuralOscilloscope 
-                isActive={pulse.active} 
-                intensity={pulse.intensity} 
-                mood={pulse.mood} 
+                isActive={isActive} 
+                intensity={currentIntensity} 
+                mood={currentMood} 
+                color={scopeColor}
              />
           </div>
           
@@ -157,35 +213,41 @@ export function HiveMind() {
                
                // Mood/Sentiment Color Logic
                const sentiment = log.metadata?.sentiment || 50;
-               let sentimentColor = 'bg-neon-cyan';
-               let borderColor = 'border-neon-cyan/30';
-               let shadowColor = 'shadow-neon-cyan/10';
+               const moodConfig = getMoodConfig(log.metadata?.mood);
                
-               if (sentiment > 75) { 
-                  sentimentColor = 'bg-matrix-green'; 
-                  borderColor = 'border-matrix-green/40';
-                  shadowColor = 'shadow-matrix-green/20';
-               } else if (sentiment < 30) {
-                  sentimentColor = 'bg-glitch-red';
-                  borderColor = 'border-glitch-red/40';
-                  shadowColor = 'shadow-glitch-red/20';
-               }
+               const sentimentColor = moodConfig.bg;
+               const borderColor = moodConfig.border;
+               const shadowColor = moodConfig.shadow;
+               const hexColor = moodConfig.hex;
 
                return (
                  <div 
                    key={log.id} 
                    onClick={() => setViewingLogId(log.id)} // Click to view details
+                   onMouseEnter={() => setHoveredLogId(log.id)}
+                   onMouseLeave={() => setHoveredLogId(null)}
                    className={`relative p-3 rounded border transition-all duration-500 group/item backdrop-blur-sm overflow-hidden cursor-pointer ${
-                      isNewest 
+                      isNewest || hoveredLogId === log.id
                         ? `${borderColor} bg-white/5 shadow-lg ${shadowColor}` 
                         : "border-titanium-grey/10 hover:border-white/20 bg-void-black/40 opacity-70 hover:opacity-100"
                    }`}
+                   style={{
+                      // Dynamic Border Pulse based on sentiment/energy
+                      boxShadow: (isNewest || hoveredLogId === log.id) ? `0 0 ${Math.max(5, sentiment / 5)}px ${hexColor}40` : undefined, // 40 is hex opacity ~25%
+                      borderColor: (isNewest || hoveredLogId === log.id) ? hexColor : undefined
+                   }}
                  >
                    {/* Sentiment Bar Indicator (Visualizing Energy) */}
                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-void-black/50">
                       <div 
-                        className={`w-full transition-all duration-1000 ${sentimentColor}`} 
-                        style={{ height: `${sentiment}%`, marginTop: `${100 - sentiment}%` }} 
+                        className={`w-full transition-all ${sentimentColor} ${sentiment > 80 ? 'animate-pulse' : ''}`} 
+                        style={{ 
+                            height: `${sentiment}%`, 
+                            marginTop: `${100 - sentiment}%`,
+                            opacity: (isNewest || hoveredLogId === log.id) ? 1 : 0.6,
+                            // Variable pulse speed based on energy (High energy = Fast pulse)
+                            animationDuration: sentiment > 80 ? `${Math.max(0.2, 1 - (sentiment-80)/40)}s` : undefined
+                        }} 
                       />
                    </div>
 

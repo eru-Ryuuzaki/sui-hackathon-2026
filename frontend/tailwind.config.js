@@ -10,6 +10,10 @@ export default {
         "acid-yellow": "#f0ff00",
         "glitch-red": "#ff003c",
         "neon-purple": "#bc13fe", // Added for MANUAL mode
+        "neon-orange": "#ff9e00", // Added for Hot/Energetic
+        "plasma-pink": "#ff00ff", // Added for Love/Excitement
+        "cyber-blue": "#0077ff", // Added for Deep/Sad/Cold
+        "bio-lime": "#ccff00", // Added for Sick/Acidic
         "titanium-grey": "#8a8a8a", // Brightened from #3d3d3d for better visibility
       },
       fontFamily: {

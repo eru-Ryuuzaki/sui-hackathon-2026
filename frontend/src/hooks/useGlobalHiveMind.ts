@@ -8,15 +8,27 @@ export type HiveLog = MemoryLog;
 // Define Store State
 interface GlobalHiveStore {
   globalLogs: HiveLog[];
-  addGlobalLog: (log: HiveLog) => void;
+  stats: {
+    totalSubjects: number;
+    totalShards: number;
+  };
+  addGlobalLog: (log: HiveLog, isNewUser?: boolean) => void;
   initSeeds: () => void;
 }
 
 // Create Zustand Store (Shared Global State)
 const useGlobalStore = create<GlobalHiveStore>((set, get) => ({
   globalLogs: [],
-  addGlobalLog: (log) => set((state) => ({ 
-    globalLogs: [log, ...state.globalLogs].slice(0, 10) 
+  stats: {
+    totalSubjects: 124, // Mock initial state
+    totalShards: 8902
+  },
+  addGlobalLog: (log, isNewUser = false) => set((state) => ({ 
+    globalLogs: [log, ...state.globalLogs].slice(0, 10),
+    stats: {
+        totalSubjects: state.stats.totalSubjects + (isNewUser ? 1 : 0),
+        totalShards: state.stats.totalShards + 1
+    }
   })),
   initSeeds: () => {
     // Only init if empty
@@ -78,7 +90,7 @@ const MOOD_SENTIMENT_MAP: Record<string, number> = {
 };
 
 export function useGlobalHiveMind() {
-  const { globalLogs, addGlobalLog, initSeeds } = useGlobalStore();
+  const { globalLogs, stats, addGlobalLog, initSeeds } = useGlobalStore();
 
   useEffect(() => {
     // Initialize Seeds
@@ -107,6 +119,9 @@ export function useGlobalHiveMind() {
         ];
         const message = contents[Math.floor(Math.random() * contents.length)];
         const userPrefix = `[USER-${Math.floor(Math.random() * 9999)}]`;
+        
+        // 10% chance it's a "new user" event for stats simulation
+        const isNewUser = Math.random() > 0.9;
         
         // Format Content for LogDetails Parsing
         const dateStr = new Date().toISOString().split('T')[0];
@@ -145,5 +160,5 @@ export function useGlobalHiveMind() {
           // To fix "multiple subscribers" issue in this hackathon context:
           // We can check if we are the "main" instance or just rely on the store.
 
-  return { globalLogs };
+  return { globalLogs, stats };
 }

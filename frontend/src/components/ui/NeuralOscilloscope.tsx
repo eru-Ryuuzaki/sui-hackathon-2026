@@ -4,9 +4,10 @@ interface NeuralOscilloscopeProps {
   intensity?: number; // 0-100, amplitude of the pulse
   mood?: 'calm' | 'alert' | 'creative'; // Determines color/shape
   isActive?: boolean; // Whether a pulse is currently happening
+  color?: string; // Optional hex override for precise color matching
 }
 
-export function NeuralOscilloscope({ intensity = 50, mood = 'calm', isActive = false }: NeuralOscilloscopeProps) {
+export function NeuralOscilloscope({ intensity = 50, mood = 'calm', isActive = false, color }: NeuralOscilloscopeProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
   const timeRef = useRef(0);
@@ -14,6 +15,9 @@ export function NeuralOscilloscope({ intensity = 50, mood = 'calm', isActive = f
 
   // Color Mapping
   const getColors = () => {
+    if (color) {
+        return { stroke: color, shadow: color };
+    }
     switch(mood) {
       case 'alert': return { stroke: '#ff003c', shadow: '#ff003c' }; // Glitch Red
       case 'creative': return { stroke: '#bc13fe', shadow: '#bc13fe' }; // Neon Purple
@@ -119,7 +123,7 @@ export function NeuralOscilloscope({ intensity = 50, mood = 'calm', isActive = f
       window.removeEventListener('resize', resize);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [intensity, mood, isActive]);
+  }, [intensity, mood, isActive, color]);
 
   return (
     <div className="w-full h-24 bg-void-black border-b border-titanium-grey/20 relative overflow-hidden">

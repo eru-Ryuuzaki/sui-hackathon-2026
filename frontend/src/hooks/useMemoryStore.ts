@@ -130,7 +130,7 @@ const FIXED_LOGS: MemoryLog[] = [
   // ... Keep other fixed logs if needed, or just let random take over
 ];
 
-const SYSTEM_LOGS = [...FIXED_LOGS, ...generateMockLogs(15)];
+const SYSTEM_LOGS = [...FIXED_LOGS]; // , ...generateMockLogs(15)];
 
 export const useMemoryStore = create<MemoryStore>()(
   persist(

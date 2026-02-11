@@ -15,7 +15,7 @@ interface UserStore {
   currentUser: UserProfile | null;
   // Actions
   login: (address: string) => boolean;
-  register: (address: string, codename: string) => void;
+  register: (address: string, codename: string, constructId?: string) => void;
   updateAvatar: (address: string, newSeed: string) => void;
   updateBirthday: (address: string, birthday: string) => void; // New Action
   logout: () => void;
@@ -36,16 +36,18 @@ export const useUserStore = create<UserStore>()(
         return false;
       },
 
-      register: (address, codename) => {
-        // Mock Construct ID generation
-        const mockConstructId = `0x${Math.random().toString(16).slice(2, 10)}${Math.random().toString(16).slice(2, 10)}`;
+      register: (address, codename, constructId) => {
+        // Mock Construct ID generation if not provided
+        const finalConstructId =
+          constructId ||
+          `0x${Math.random().toString(16).slice(2, 10)}${Math.random().toString(16).slice(2, 10)}`;
 
         const newUser: UserProfile = {
           address,
           codename,
           avatarSeed: address,
           createdAt: Date.now(),
-          constructId: mockConstructId, // Assign mock ID
+          constructId: finalConstructId,
         };
 
         set((state) => ({
@@ -87,7 +89,7 @@ export const useUserStore = create<UserStore>()(
       logout: () => set({ currentUser: null }),
     }),
     {
-      name: "engram_users_storage_v2", // Bump version to invalidate old users without constructId
+      name: "engram_users_storage_v3", // Bump version to invalidate old users without constructId
     },
   ),
 );

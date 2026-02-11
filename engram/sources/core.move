@@ -1,24 +1,19 @@
 module engram::core {
-    use std::string::{Self, String};
-    use std::option::{Self, Option};
-    use sui::object::{Self, UID, ID};
-    use sui::transfer;
-    use sui::tx_context::{Self, TxContext};
-    use sui::clock::{Self, Clock};
+    use std::string::{String};
+    use sui::clock::{Clock};
     use sui::dynamic_field;
-    use sui::dynamic_object_field;
     use sui::event;
 
     // ================= Errors =================
     const ELengthExceeded: u64 = 0;
-    const EInsufficientEnergy: u64 = 1;
+    // const EInsufficientEnergy: u64 = 1;
     const ENotAuthorized: u64 = 2;
     const ENoBackupSet: u64 = 3;
 
     // ================= Constants =================
     const MAX_SHARD_LENGTH: u64 = 1000;
     const BASE_EXP_REWARD: u64 = 10;
-    const ENERGY_COST_PER_SHARD: u64 = 5;
+    // const ENERGY_COST_PER_SHARD: u64 = 5;
 
     // ================= Structs =================
 
@@ -119,16 +114,16 @@ module engram::core {
         clock: &Clock,
         ctx: &mut TxContext
     ) {
-        let sender = tx_context::sender(ctx);
+        let sender = ctx.sender();
         
         let metrics = Metrics {
             focus: 50,
             resilience: 50,
-            last_update: clock::timestamp_ms(clock),
+            last_update: clock.timestamp_ms(),
         };
 
         let id = object::new(ctx);
-        let construct_id = object::uid_to_inner(&id);
+        let construct_id = id.to_inner();
 
         let construct = Construct {
             id,
@@ -147,7 +142,7 @@ module engram::core {
         event::emit(SubjectJackedInEvent {
             subject: sender,
             construct_id,
-            timestamp: clock::timestamp_ms(clock),
+            timestamp: clock.timestamp_ms(),
         });
 
         // Share the object so it can be recovered later
@@ -167,15 +162,15 @@ module engram::core {
         media_type: Option<String>,
         ctx: &mut TxContext
     ) {
-        let sender = tx_context::sender(ctx);
+        let sender = ctx.sender();
         // Authorization: Only the owner can engrave
         assert!(construct.owner == sender, ENotAuthorized);
         
         // Validation
-        assert!(string::length(&content) <= MAX_SHARD_LENGTH, ELengthExceeded);
+        assert!(content.length() <= MAX_SHARD_LENGTH, ELengthExceeded);
         
         // Mint Shard
-        let timestamp = clock::timestamp_ms(clock);
+        let timestamp = clock.timestamp_ms();
         let shard = MemoryShard {
             timestamp,
             category,
@@ -214,14 +209,14 @@ module engram::core {
         // Emit Event
         event::emit(ShardEngravedEvent {
             subject: sender,
-            construct_id: object::uid_to_inner(&construct.id),
+            construct_id: construct.id.to_inner(),
             shard_id: construct.shard_count - 1,
             timestamp,
             category,
             mood,
             is_encrypted,
-            has_attachment: option::is_some(&blob_id),
-            content_snippet: if (is_encrypted) { string::utf8(b"[ENCRYPTED]") } else { content },
+            has_attachment: blob_id.is_some(),
+            content_snippet: if (is_encrypted) { b"[ENCRYPTED]".to_string() } else { content },
             media_type,
         });
 
@@ -233,7 +228,7 @@ module engram::core {
         new_backup: address,
         ctx: &mut TxContext
     ) {
-        assert!(construct.owner == tx_context::sender(ctx), ENotAuthorized);
+        assert!(construct.owner == ctx.sender(), ENotAuthorized);
         construct.backup_controller = option::some(new_backup);
     }
 
@@ -244,9 +239,9 @@ module engram::core {
         clock: &Clock,
         ctx: &mut TxContext
     ) {
-        let sender = tx_context::sender(ctx);
-        assert!(option::is_some(&construct.backup_controller), ENoBackupSet);
-        assert!(option::borrow(&construct.backup_controller) == &sender, ENotAuthorized);
+        let sender = ctx.sender();
+        assert!(construct.backup_controller.is_some(), ENoBackupSet);
+        assert!(construct.backup_controller.borrow() == &sender, ENotAuthorized);
 
         let old_owner = construct.owner;
         construct.owner = sender; // The backup becomes the new master
@@ -255,10 +250,10 @@ module engram::core {
         // Let's keep it, or the new owner can set a new one.
 
         event::emit(EmergencyRecoveryEvent {
-            construct_id: object::uid_to_inner(&construct.id),
+            construct_id: construct.id.to_inner(),
             old_owner,
             new_owner: sender,
-            timestamp: clock::timestamp_ms(clock),
+            timestamp: clock.timestamp_ms(),
         });
     }
 }

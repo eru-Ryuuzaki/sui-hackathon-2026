@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
-import { useCurrentAccount } from '@mysten/dapp-kit';
+import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
+import { useSponsoredTransaction } from '@/hooks/useSponsoredTransaction';
+import { buildJackInTx } from '@/utils/sui/transactions';
 import { useUserStore } from '@/hooks/useUserStore';
 import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { cn } from '@/utils/cn';
@@ -25,6 +27,8 @@ interface TerminalLine {
 
 export function Terminal() {
   const account = useCurrentAccount();
+  const { mutateAsync: signAndExecuteTransaction } = useSignAndExecuteTransaction();
+  const { executeSponsoredTx } = useSponsoredTransaction();
   const { currentUser, login, register, updateBirthday } = useUserStore();
   const { addLog, viewingLogId, setViewingLogId } = useMemoryStore();
   const [command, setCommand] = useState('');
@@ -124,9 +128,57 @@ export function Terminal() {
     });
 
     // 3. Finalize Registration after logs
-    setTimeout(() => {
+    setTimeout(async () => {
+      let constructId: string | undefined;
+
+      try {
+         setHistory(prev => [...prev, { id: Math.random().toString(), type: 'system', content: `> INITIATING NEURAL LINK (JACK_IN)... PLEASE APPROVE.` }]);
+          
+          let result;
+
+         // Try Sponsored first, then fallback
+         try {
+             // Create specific transaction instance for sponsored attempt
+             const sponsoredTx = buildJackInTx();
+             result = await executeSponsoredTx(sponsoredTx);
+         } catch (e) {
+             console.warn("Sponsored Jack-In failed, falling back to wallet", e);
+             
+             // Create FRESH transaction for wallet fallback to avoid reuse issues
+             const walletTx = buildJackInTx();
+             
+             // Fallback to wallet
+             result = await signAndExecuteTransaction({ 
+                 transaction: walletTx,
+             });
+             // Note: Wallet might not return events depending on implementation, 
+             // but usually it returns the response.
+         }
+         
+         // Parse Result for Construct ID
+         if (result && result.events) {
+             const jackInEvent = result.events.find((e: any) => e.type.includes("SubjectJackedInEvent"));
+             if (jackInEvent && jackInEvent.parsedJson) {
+                 constructId = (jackInEvent.parsedJson as any).construct_id;
+             }
+         }
+
+         if (constructId) {
+             setHistory(prev => [...prev, { id: Math.random().toString(), type: 'success', content: `> NEURAL LINK ESTABLISHED. CONSTRUCT ID: ${constructId.slice(0,8)}...` }]);
+         } else {
+             // If we couldn't find ID (maybe wallet didn't return events), we are in trouble.
+             // We could try to fetch the transaction again if we have the digest?
+             // But for now, let's warn.
+             setHistory(prev => [...prev, { id: Math.random().toString(), type: 'error', content: `> WARNING: COULD NOT VERIFY CONSTRUCT ID. USING SIMULATION MODE.` }]);
+         }
+
+      } catch (e) {
+         console.error("Jack In Failed", e);
+         setHistory(prev => [...prev, { id: Math.random().toString(), type: 'error', content: `> NEURAL LINK FAILED. OFFLINE MODE ACTIVATED.` }]);
+      }
+
       // Update Store
-      register(currentAddress!, codename);
+      register(currentAddress!, codename, constructId);
       updateBirthday(currentAddress!, birthday);
 
       // Show Avatar in Terminal
@@ -149,7 +201,6 @@ export function Terminal() {
         { id: Math.random().toString(), type: 'system', content: `> TYPE 'HELP' TO BEGIN.` }
       ]);
       
-      // setIsRegistering(false); // <--- Removed: Already closed at start
       setTimeout(() => setShowMatrix(false), 5000); // Fade out matrix rain
     }, delay + 1000);
   };

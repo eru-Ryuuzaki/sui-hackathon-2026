@@ -146,7 +146,8 @@ const useSuiLogService = () => {
 export function useLogService() {
   // Check Environment Variable
   // Note: Vite env vars are strings. 'true' checks string equality.
-  const useMock = import.meta.env.VITE_USE_MOCK === 'true';
+  // const useMock = import.meta.env.VITE_USE_MOCK === 'true';
+  const useMock = false; // Force Real Service for Testing
 
   if (useMock) {
     console.debug("[Engram] Using MOCK Log Service");
