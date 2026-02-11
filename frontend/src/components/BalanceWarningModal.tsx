@@ -28,7 +28,9 @@ export function BalanceWarningModal() {
     }
 
     if (balanceData) {
-      const balance = BigInt(balanceData.totalBalance);
+      // Safe conversion with fallback for null/undefined
+      const balanceVal = balanceData.totalBalance ?? "0";
+      const balance = BigInt(balanceVal);
       // Threshold: 0.01 SUI (10,000,000 MIST)
       // If less than this, they probably can't do anything
       const MIN_REQUIRED_MIST = 10000000n; 
