@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { GlitchModal } from '@/components/ui/GlitchModal';
 import { triggerAlert } from '@/components/ui/SystemAlert';
-import { User, Calendar, Cpu, ArrowRight } from 'lucide-react';
+import { User, Calendar, Cpu, ArrowRight, Gift } from 'lucide-react';
+import { useCurrentAccount } from '@mysten/dapp-kit';
+import axios from 'axios';
 
 interface IdentityRegistrationModalProps {
   isOpen: boolean;
@@ -10,21 +12,50 @@ interface IdentityRegistrationModalProps {
 }
 
 export function IdentityRegistrationModal({ isOpen, onConfirm, defaultCodename = '' }: IdentityRegistrationModalProps) {
+  const account = useCurrentAccount();
   const [codename, setCodename] = useState(defaultCodename);
   const [birthday, setBirthday] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isClaiming, setIsClaiming] = useState(false);
+  const [hasClaimed, setHasClaimed] = useState(false);
 
   // Auto-fill codename when prop changes
   useEffect(() => {
     if (defaultCodename) {
-        // If default is a Guest address (Guest-1234), trim it to just the hash part
-        // Actually, user requested: "Wallet 登录的默认用户名不要带guess吧，感觉就选择前几位或者后几位比较好"
-        // The prop passed in might already be formatted, but let's double check logic in parent.
-        // Parent passes: (account ? `Guest-${account.address.slice(-4)}` : '')
-        // We should change the parent logic instead.
         setCodename(defaultCodename);
     }
   }, [defaultCodename]);
+
+  // Auto-Claim Faucet when Modal Opens
+  useEffect(() => {
+    if (isOpen && account?.address && !hasClaimed && !isClaiming) {
+        claimFaucet(account.address);
+    }
+  }, [isOpen, account]);
+
+  const claimFaucet = async (address: string) => {
+    setIsClaiming(true);
+    try {
+        // Call Backend Faucet API
+        // Assuming backend is running on localhost:3001
+        await axios.post('http://localhost:3001/api/faucet/claim', {
+            address: address
+        });
+        
+        setHasClaimed(true);
+        triggerAlert({ 
+            type: 'success', 
+            title: 'NEWBIE GRANT RECEIVED', 
+            message: '0.1 SUI has been transferred for your first Engraving.',
+            duration: 5000 
+        });
+    } catch (error) {
+        console.error("Faucet Claim Failed:", error);
+        // Don't block registration if faucet fails (maybe they already have SUI)
+    } finally {
+        setIsClaiming(false);
+    }
+  };
 
   const handleSubmit = () => {
     // Validation
@@ -32,15 +63,20 @@ export function IdentityRegistrationModal({ isOpen, onConfirm, defaultCodename =
       triggerAlert({ type: 'error', title: 'INVALID IDENTITY', message: 'Codename must be 2-20 characters.' });
       return;
     }
+    // Birthday is optional now
+    /*
     if (!birthday) {
       triggerAlert({ type: 'error', title: 'MISSING DATA', message: 'Origin date (birthday) is required for life-frame calculation.' });
       return;
     }
+    */
 
     setIsSubmitting(true);
     
     // Trigger callback
-    onConfirm(codename, birthday);
+    // If birthday is empty, pass a default or empty string depending on requirement.
+    // Assuming onConfirm handles empty string gracefully or we pass a placeholder.
+    onConfirm(codename, birthday || '2000-01-01'); // Default to Y2K if empty
     
     // Reset state after a delay (handled by parent closing modal)
     setTimeout(() => setIsSubmitting(false), 1000);
@@ -57,6 +93,11 @@ export function IdentityRegistrationModal({ isOpen, onConfirm, defaultCodename =
         <div className="text-xs text-titanium-grey border-l-2 border-neon-cyan pl-2 py-1">
           &gt; UNREGISTERED CONSCIOUSNESS DETECTED.<br/>
           &gt; PLEASE ESTABLISH YOUR DIGITAL IDENTITY.
+          {hasClaimed && (
+             <div className="text-matrix-green mt-1 animate-pulse">
+                &gt; NEWBIE GRANT RECEIVED: +0.1 SUI
+             </div>
+          )}
         </div>
 
         {/* Codename Input */}
@@ -82,7 +123,7 @@ export function IdentityRegistrationModal({ isOpen, onConfirm, defaultCodename =
         {/* Birthday Input */}
         <div className="space-y-2 group">
           <label className="text-[10px] text-neon-cyan flex items-center gap-2 group-focus-within:text-white transition-colors">
-            <Calendar size={12} /> ORIGIN DATE
+            <Calendar size={12} /> ORIGIN DATE <span className="text-titanium-grey/50">(OPTIONAL)</span>
           </label>
           <input
             type="date"
@@ -91,7 +132,7 @@ export function IdentityRegistrationModal({ isOpen, onConfirm, defaultCodename =
             className="w-full bg-white/5 border border-titanium-grey/50 px-3 py-2 text-white focus:border-neon-cyan outline-none transition-all [color-scheme:dark]"
           />
           <div className="text-[10px] text-titanium-grey/70 italic">
-            * Required for Life Frame synchronization.
+            * Used for Life Frame synchronization if provided.
           </div>
         </div>
 

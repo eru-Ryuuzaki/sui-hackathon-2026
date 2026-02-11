@@ -5,7 +5,7 @@ import { CyberAvatar } from '@/components/ui/CyberAvatar';
 import { LoginSelector } from '@/components/LoginSelector';
 import { SettingsModal } from '@/components/SettingsModal';
 import { useState, useMemo } from 'react';
-import { Power, Radio, Settings } from 'lucide-react';
+import { Power, Radio, Settings, Eye, EyeOff } from 'lucide-react';
 import { triggerAlert } from '@/components/ui/SystemAlert';
 import { formatBalance } from '@/utils/formatAmount';
 
@@ -18,6 +18,17 @@ export function HUD() {
   const [hasRerolledInHover, setHasRerolledInHover] = useState(false); 
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false); 
+  
+  // Balance Visibility State (Default: Visible)
+  const [showBalance, setShowBalance] = useState(() => {
+    return localStorage.getItem('ENGRAM_SHOW_BALANCE') !== 'false';
+  });
+
+  const toggleBalance = () => {
+    const newState = !showBalance;
+    setShowBalance(newState);
+    localStorage.setItem('ENGRAM_SHOW_BALANCE', String(newState));
+  };
 
   // Fetch Balance
   const { data: balanceData } = useSuiClientQuery(
@@ -197,7 +208,18 @@ export function HUD() {
               <div>
                 <div className="text-xs text-titanium-grey mb-1 flex justify-between">
                   <span>ENERGY</span>
-                  <span className="text-neon-cyan">{energyState.text}</span>
+                  <div className="flex items-center gap-2">
+                     <span className="text-neon-cyan font-mono">
+                        {showBalance ? energyState.text : '**** SUI'}
+                     </span>
+                     <button 
+                       onClick={toggleBalance}
+                       className="text-titanium-grey hover:text-white transition-colors"
+                       title={showBalance ? "Hide Balance" : "Show Balance"}
+                     >
+                       {showBalance ? <Eye size={12} /> : <EyeOff size={12} />}
+                     </button>
+                  </div>
                 </div>
                 <div className="flex gap-0.5">
                   {[...Array(10)].map((_, i) => (

@@ -8,11 +8,13 @@ import { ZkLoginController } from './zklogin.controller';
 import { Construct } from '../entities/construct.entity';
 import { MemoryShard } from '../entities/memory-shard.entity';
 import { NeuralBadge } from '../entities/neural-badge.entity';
+import { FaucetRecord } from '../entities/faucet-record.entity';
 import { MemoryService } from '../services/memory.service';
+import { FaucetService } from '../services/faucet.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Construct, MemoryShard, NeuralBadge]),
+    TypeOrmModule.forFeature([Construct, MemoryShard, NeuralBadge, FaucetRecord]),
   ],
   controllers: [
     FaucetController,
@@ -23,6 +25,7 @@ import { MemoryService } from '../services/memory.service';
   ],
   providers: [
     MemoryService,
+    FaucetService,
   ],
 })
 export class ApiModule {}

@@ -1,41 +1,25 @@
-import { Controller, Post, Body, BadRequestException, Logger } from '@nestjs/common';
+import { Controller, Post, Body, Ip, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiProperty } from '@nestjs/swagger';
-import { SuiService } from '../sui/sui.service';
+import { FaucetService } from '../services/faucet.service';
+import { isValidSuiAddress } from '@mysten/sui.js/utils';
 
-class ClaimFaucetDto {
-  @ApiProperty()
+class ClaimDto {
+  @ApiProperty({ description: 'Sui Wallet Address', example: '0x123...' })
   address: string;
-
-  @ApiProperty()
-  jwt_token: string;
 }
 
 @ApiTags('Faucet')
 @Controller('faucet')
 export class FaucetController {
-  private readonly logger = new Logger(FaucetController.name);
-
-  constructor(private suiService: SuiService) {}
+  constructor(private readonly faucetService: FaucetService) {}
 
   @Post('claim')
-  @ApiOperation({ summary: 'Claim initial SUI for new users' })
-  async claim(@Body() dto: ClaimFaucetDto) {
-    // 1. Validate JWT (Mock for now)
-    if (!dto.jwt_token) {
-      throw new BadRequestException('Missing JWT token');
+  @ApiOperation({ summary: 'Claim initial SUI for new users (One-time only)' })
+  async claim(@Body() body: ClaimDto, @Ip() ip: string) {
+    if (!body.address || !isValidSuiAddress(body.address)) {
+      throw new BadRequestException('Invalid Sui address provided.');
     }
     
-    // 2. Check if address already claimed (Redis rate limit or DB check)
-    // TODO: Implement check
-
-    // 3. Transfer SUI
-    try {
-      // 0.01 SUI = 10_000_000 MIST
-      const digest = await this.suiService.transferSui(dto.address, 10_000_000);
-      return { status: 'success', digest };
-    } catch (e) {
-      this.logger.error(`Faucet claim failed for ${dto.address}`, e);
-      throw new BadRequestException('Faucet claim failed');
-    }
+    return await this.faucetService.claim(body.address, ip);
   }
 }

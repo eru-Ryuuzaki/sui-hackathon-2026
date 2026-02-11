@@ -38,6 +38,8 @@ export function AttachmentUploader({ attachments, onAttachmentsChange, isEncrypt
   const [isUploadWarningOpen, setIsUploadWarningOpen] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<FileList | null>(null);
   const [dontShowAgain, setDontShowAgain] = useState(false);
+  // Default Epochs = 1
+  const [selectedEpochs, setSelectedEpochs] = useState<number>(1);
 
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -140,10 +142,10 @@ export function AttachmentUploader({ attachments, onAttachmentsChange, isEncrypt
           }
 
           // Upload Step
-          const blobId = await WalrusService.uploadBlob(blobToUpload);
+          const blobId = await WalrusService.uploadBlob(blobToUpload, selectedEpochs);
 
           // Success
-          currentList[i] = { 
+          currentList[i] = {  
             ...item, 
             status: 'uploaded', 
             blobId, 
@@ -271,9 +273,22 @@ export function AttachmentUploader({ attachments, onAttachmentsChange, isEncrypt
                     <span className="text-titanium-grey">TARGET NETWORK:</span>
                     <span className="text-neon-cyan font-bold">WALRUS (TESTNET)</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                     <span className="text-titanium-grey">STORAGE DURATION:</span>
-                    <span className="text-white">1 EPOCH (RENEWABLE)</span>
+                    <div className="flex items-center gap-2">
+                        <select 
+                            value={selectedEpochs}
+                            onChange={(e) => setSelectedEpochs(Number(e.target.value))}
+                            className="bg-void-black border border-titanium-grey/50 text-white text-[10px] px-1 py-0.5 rounded focus:border-neon-cyan outline-none cursor-pointer"
+                        >
+                            <option value={1}>1 EPOCH</option>
+                            <option value={5}>5 EPOCHS</option>
+                            <option value={10}>10 EPOCHS</option>
+                            <option value={30}>30 EPOCHS</option>
+                            <option value={100}>100 EPOCHS</option>
+                        </select>
+                        <span className="text-titanium-grey/50 text-[9px]">(RENEWABLE)</span>
+                    </div>
                 </div>
                 <div className="flex justify-between">
                     <span className="text-titanium-grey">ENCRYPTION STATUS:</span>

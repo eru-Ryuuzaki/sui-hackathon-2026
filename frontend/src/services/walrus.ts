@@ -72,5 +72,31 @@ export const WalrusService = {
       responseType: 'blob'
     });
     return response.data;
+  },
+
+  /**
+   * Extend storage duration for an existing Blob
+   * @param blobId The Walrus Blob ID
+   * @param epochs Number of additional epochs to purchase
+   */
+  extendStorage: async (blobId: string, epochs: number): Promise<boolean> => {
+    try {
+      // Walrus Publisher API: POST /v1/blobs/{blobId}?epochs=N
+      // Note: This operation requires paying storage fees, similar to upload.
+      const response = await axios.post(
+        `${PUBLISHER_URL}/v1/blobs/${blobId}?epochs=${epochs}`,
+        {}, // Empty body
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      return response.status === 200;
+    } catch (error) {
+      console.error('Walrus Extend Storage Error:', error);
+      throw error;
+    }
   }
 };

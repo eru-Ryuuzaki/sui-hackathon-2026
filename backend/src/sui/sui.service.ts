@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { SuiClient, getFullnodeUrl } from '@mysten/sui.js/client';
 import { Ed25519Keypair } from '@mysten/sui.js/keypairs/ed25519';
 import { TransactionBlock } from '@mysten/sui.js/transactions';
-import { fromB64 } from '@mysten/sui.js/utils';
+import { decodeSuiPrivateKey } from '@mysten/sui.js/cryptography';
 import { EngraveDto } from '../dto/engrave.dto';
 
 @Injectable()
@@ -27,7 +27,8 @@ export class SuiService implements OnModuleInit {
     const privateKey = this.configService.get<string>('SUI_FAUCET_PRIVATE_KEY');
     if (privateKey) {
       try {
-        this.signer = Ed25519Keypair.fromSecretKey(fromB64(privateKey));
+        const { secretKey } = decodeSuiPrivateKey(privateKey);
+        this.signer = Ed25519Keypair.fromSecretKey(secretKey);
       } catch (e) {
         this.logger.error('Failed to load faucet key', e);
       }
