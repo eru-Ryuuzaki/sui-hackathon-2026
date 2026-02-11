@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { GlitchModal } from '@/components/ui/GlitchModal';
 import { triggerAlert } from '@/components/ui/SystemAlert';
-import { User, Calendar, Cpu, ArrowRight, Gift } from 'lucide-react';
+import { User, Calendar, Cpu, ArrowRight} from 'lucide-react';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import axios from 'axios';
 

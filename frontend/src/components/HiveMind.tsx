@@ -2,12 +2,35 @@ import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { Card } from '@/components/ui/Card';
 import { HiveMindCalendar } from '@/components/ui/HiveMindCalendar';
 import { format } from 'date-fns';
-import { AttachmentViewer } from '@/components/ui/AttachmentViewer';
+import { NeuralOscilloscope } from '@/components/ui/NeuralOscilloscope';
+import { useState, useEffect } from 'react';
+import { useGlobalHiveMind } from '@/hooks/useGlobalHiveMind';
 
 export function HiveMind() {
-  const { logs } = useMemoryStore();
+  const { logs } = useMemoryStore(); // Local logs for Calendar
+  const { globalLogs } = useGlobalHiveMind(); // Global logs for Feed
+  
+  const [pulse, setPulse] = useState<{ active: boolean, intensity: number, mood: 'calm' | 'alert' | 'creative' }>({
+    active: false,
+    intensity: 0,
+    mood: 'calm'
+  });
 
-  // Convert logs for Calendar
+  // Watch for new GLOBAL logs to trigger pulse (Global Hive Mind)
+  useEffect(() => {
+    if (globalLogs.length > 0) {
+      const latest = globalLogs[0];
+      // Pulse logic is already handled by the mood in globalLogs, but we trigger the animation here
+      setPulse({ active: true, intensity: 60 + Math.random() * 30, mood: latest.mood }); 
+
+      const timer = setTimeout(() => {
+        setPulse(p => ({ ...p, active: false }));
+      }, 500); 
+      return () => clearTimeout(timer);
+    }
+  }, [globalLogs]);
+
+  // Convert logs for Calendar (Still uses LOCAL logs as Calendar is personal)
   const calendarLogs = logs.map(log => ({
     id: log.id,
     date: new Date(log.timestamp),
@@ -30,16 +53,24 @@ export function HiveMind() {
       </div>
 
       {/* Bottom: Feed (Remaining Height) */}
-      <Card className="flex-1 flex flex-col overflow-hidden relative min-h-0">
-          <div className="flex items-center justify-between mb-4 shrink-0">
-            <h2 className="text-sm font-bold text-titanium-grey tracking-widest flex items-center gap-2">
-              <span className="w-2 h-2 bg-matrix-green rounded-full animate-pulse" />
-              HIVE MIND FEED
-            </h2>
+      <Card className="flex-1 flex flex-col overflow-hidden relative min-h-0 p-0">
+          {/* Header with Pulse */}
+          <div className="shrink-0 relative">
+             <div className="absolute top-2 left-3 z-10 flex items-center gap-2">
+                <h2 className="text-sm font-bold text-titanium-grey tracking-widest flex items-center gap-2 bg-void-black/80 px-2 py-1 rounded backdrop-blur-sm border border-titanium-grey/20">
+                  <span className="w-2 h-2 bg-matrix-green rounded-full animate-pulse" />
+                  HIVE MIND FEED
+                </h2>
+             </div>
+             <NeuralOscilloscope 
+                isActive={pulse.active} 
+                intensity={pulse.intensity} 
+                mood={pulse.mood} 
+             />
           </div>
           
-          <div className="space-y-3 overflow-hidden flex-1 min-h-0 mask-image-gradient-b">
-             {logs.slice(0, 5).map((log, index) => { // Limit to 5 for absolute safety (No Scroll)
+          <div className="space-y-3 overflow-hidden flex-1 min-h-0 mask-image-gradient-b p-3 pt-2">
+             {globalLogs.slice(0, 3).map((log, index) => { // Use GLOBAL logs here
                let containerClass = "p-3 border-l-2 transition-all duration-300 group/item backdrop-blur-sm ";
                let textClass = "text-xs font-mono transition-colors ";
                let subjectClass = "font-bold text-[10px] mb-1 transition-colors ";
@@ -53,20 +84,13 @@ export function HiveMind() {
                   subjectClass += " text-white drop-shadow-[0_0_5px_rgba(0,255,65,0.8)]";
                   actionClass += " text-matrix-green/90";
                   hashClass += " text-matrix-green/70";
-               } else if (index < 4) { 
-                  // ACTIVE ZONE (Next 3): Standard Green, Solid Border
-                  containerClass += " border-matrix-green/30 hover:bg-white/5 hover:border-matrix-green/60";
-                  textClass += " text-matrix-green/80";
-                  subjectClass += " text-matrix-green group-hover/item:text-neon-cyan";
-                  actionClass += " text-titanium-grey group-hover/item:text-titanium-grey/80";
-                  hashClass += " text-titanium-grey/50";
-               } else {
-                  // FADING ZONE (Last 1): Fading out, No Border
-                  containerClass += " border-transparent hover:bg-white/5";
-                  textClass += " text-titanium-grey";
-                  subjectClass += " text-titanium-grey/70 group-hover/item:text-titanium-grey";
-                  actionClass += " text-titanium-grey/40";
-                  hashClass += " text-titanium-grey/20";
+               } else { 
+                  // NORMAL (Next 2): Reduced brightness, Context only
+                  containerClass += " border-titanium-grey/20 hover:bg-white/5 hover:border-titanium-grey/40";
+                  textClass += " text-titanium-grey/80";
+                  subjectClass += " text-titanium-grey group-hover/item:text-neon-cyan";
+                  actionClass += " text-titanium-grey/60";
+                  hashClass += " text-titanium-grey/30";
                }
 
                return (
@@ -74,8 +98,7 @@ export function HiveMind() {
                    key={log.id} 
                    className={containerClass}
                    style={{
-                      // Optimized Fade for 5 items: Only the last one fades
-                      opacity: index === 4 ? 0.3 : 1
+                      opacity: index === 0 ? 1 : 0.6 // Dim older items significantly
                    }}
                  >
                    <div className="flex justify-between items-start">
@@ -85,12 +108,9 @@ export function HiveMind() {
                    <div className={textClass}>
                      {log.content}
                    </div>
-                   {log.metadata?.attachments && log.metadata.attachments.length > 0 && (
-                     <AttachmentViewer attachments={log.metadata.attachments} />
-                   )}
                    <div className="flex justify-between items-end mt-1">
                       <div className={hashClass}>{log.hash}</div>
-                      {log.metadata?.mood && <div className="text-xs opacity-50">{log.metadata.mood}</div>}
+                      {/* Global logs might not have attachments viewer for now to keep it lightweight */}
                    </div>
                  </div>
                );
