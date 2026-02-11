@@ -1,4 +1,5 @@
 import { useMemoryStore, type MemoryLog } from '@/hooks/useMemoryStore';
+import { useGlobalHiveMind } from '@/hooks/useGlobalHiveMind';
 import { parseLogTrace } from '@/utils/logHelpers';
 import { XCircle, Image as ImageIcon, Paperclip, Lock, Globe, Download, Eye } from 'lucide-react';
 import { CATEGORY_COLORS, type LogTemplateCategory } from '@/data/logTemplates';
@@ -17,10 +18,22 @@ const splitContent = (content: string) => {
 
 export function LogDetails({ onExit }: { onExit: () => void }) {
   const { logs, viewingLogId } = useMemoryStore();
+  const { globalLogs } = useGlobalHiveMind();
   
-  const log = logs.find(l => l.id === viewingLogId);
+  // Try finding log in local store first, then global store
+  const log = logs.find(l => l.id === viewingLogId) || globalLogs.find(l => l.id === viewingLogId);
   
   if (!log) {
+    // If we're viewing a log that suddenly disappears (or during unmount transition), 
+    // we should render null or a loading state instead of the error to prevent flashing.
+    // However, if it's truly not found (invalid ID), the error is appropriate.
+    // Given the "flashing on close" issue, it's likely viewingLogId is cleared (null) in parent,
+    // causing this component to re-render with null ID before unmounting?
+    // Actually, if viewingLogId is null, parent shouldn't render this component (in Terminal.tsx).
+    // BUT if there is an exit animation (Framer Motion), this component stays mounted while viewingLogId might be null or the log is gone.
+    // Let's return null if viewingLogId is null to avoid the error flash during exit animation.
+    if (!viewingLogId) return null;
+
     return (
         <div className="h-full flex flex-col items-center justify-center text-titanium-grey">
             <div>LOG_NOT_FOUND_EXCEPTION</div>

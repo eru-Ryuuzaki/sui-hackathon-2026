@@ -13,8 +13,9 @@ import { JournalEditor } from '@/components/ui/JournalEditor';
 import { MemoryArchive } from '@/components/ui/MemoryArchive';
 import { LogDetails } from '@/components/ui/LogDetails';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Terminal as TerminalIcon, PlusSquare, Trash2, Activity, XCircle, List } from 'lucide-react';
+import { Terminal as TerminalIcon, PlusSquare, Trash2, Activity, XCircle, List, Settings } from 'lucide-react';
 import { IdentityRegistrationModal } from '@/components/IdentityRegistrationModal';
+import { SettingsModal } from '@/components/SettingsModal';
 
 interface TerminalLine {
   id: string;
@@ -42,6 +43,7 @@ export function Terminal() {
   // Login Flow State
   const [isRegistering, setIsRegistering] = useState(false);
   const [showMatrix, setShowMatrix] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Mode State (CLI vs Journal vs Archive vs Detail)
   const [mode, setMode] = useState<'CLI' | 'JOURNAL' | 'ARCHIVE' | 'DETAIL'>('CLI');
@@ -323,6 +325,9 @@ export function Terminal() {
           (account ? `${account.address.slice(0, 4)}...${account.address.slice(-4)}` : '') // New Logic: 0x12...3456
         }
       />
+      
+      {/* Settings Modal */}
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
 
       <main className={cn(
         "lg:col-span-6 flex flex-col h-full min-h-0 transition-all duration-500 perspective-1000",
@@ -378,6 +383,13 @@ export function Terminal() {
                        className="text-[10px] flex items-center gap-1 px-2 py-1 rounded border border-titanium-grey/30 hover:border-neon-cyan hover:text-neon-cyan transition-colors text-titanium-grey"
                      >
                        <Trash2 size={10} /> CLEAR
+                     </button>
+                     <button 
+                       onClick={() => setIsSettingsOpen(true)}
+                       className="text-[10px] flex items-center gap-1 px-2 py-1 rounded border border-titanium-grey/30 hover:border-neon-cyan hover:text-neon-cyan transition-colors text-titanium-grey"
+                       title="Configuration"
+                     >
+                       <Settings size={10} /> SETTINGS
                      </button>
                    </>
                  )}

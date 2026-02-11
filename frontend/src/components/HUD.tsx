@@ -3,9 +3,8 @@ import { useCurrentAccount, useDisconnectWallet, ConnectButton, useSuiClientQuer
 import { useUserStore } from '@/hooks/useUserStore';
 import { CyberAvatar } from '@/components/ui/CyberAvatar';
 import { LoginSelector } from '@/components/LoginSelector';
-import { SettingsModal } from '@/components/SettingsModal';
 import { useState, useMemo } from 'react';
-import { Power, Radio, Settings, Eye, EyeOff } from 'lucide-react';
+import { Power, Radio, Eye, EyeOff } from 'lucide-react';
 import { triggerAlert } from '@/components/ui/SystemAlert';
 import { formatBalance } from '@/utils/formatAmount';
 
@@ -18,7 +17,6 @@ export function HUD() {
   const [hasRerolledInHover, setHasRerolledInHover] = useState(false); 
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isLoginLoading, setIsLoginLoading] = useState(false); // Local loading state
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false); 
   
   // Balance Visibility State (Default: Visible)
   const [showBalance, setShowBalance] = useState(() => {
@@ -121,7 +119,6 @@ export function HUD() {
   return (
     <aside className="lg:col-span-3 space-y-6 flex flex-col h-full min-h-0">
       <LoginSelector isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       
       <Card className="shrink-0">
         <div className="flex items-center gap-3 mb-2">
@@ -197,13 +194,6 @@ export function HUD() {
               <div>
                 <div className="text-xs text-titanium-grey mb-1 flex items-center justify-between">
                   <span>IDENTITY</span>
-                  <button 
-                    onClick={() => setIsSettingsOpen(true)}
-                    className="text-titanium-grey hover:text-neon-cyan transition-colors"
-                    title="Construct Configuration"
-                  >
-                    <Settings size={12} />
-                  </button>
                 </div>
                 <div className="flex items-center gap-2">
                    <div 
