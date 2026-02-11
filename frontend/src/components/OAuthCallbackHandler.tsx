@@ -45,10 +45,23 @@ export function OAuthCallbackHandler() {
         }
         
         loader.show("RETRIEVING ZK PROOFS...");
-        const res = await api.get('/zklogin/salt', { params: { sub } })
-        const salt = res.data?.salt
-        const address = jwtToAddress(idToken, salt)
-        const codename = decoded?.name || `NEURAL-${address.slice(-4)}`
+        
+        let salt: string | undefined;
+        try {
+            const res = await api.get('/zklogin/salt', { params: { sub } });
+            salt = res.data?.salt;
+        } catch (apiError) {
+            console.warn("Salt API failed, using fallback:", apiError);
+        }
+
+        // Fallback for Hackathon/Demo if backend is offline/missing
+        if (!salt) {
+             console.warn("Using MOCK SALT for demo purposes.");
+             salt = "129384710293847102938471209384712093874120938"; 
+        }
+
+        const address = jwtToAddress(idToken, salt);
+        const codename = decoded?.name || `NEURAL-${address.slice(-4)}`;
         // If user exists, we respect their stored profile (especially if they customized their avatar)
         // If not, we register them with default codename from Google or truncated address
         const store = useUserStore.getState();

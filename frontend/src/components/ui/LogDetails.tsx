@@ -76,8 +76,30 @@ export function LogDetails({ onExit }: { onExit: () => void }) {
           // So 'header' will be garbage or just the IV part if we split by newline (which might not exist).
           
           // Let's assume the raw log.content is "IV:Cipher"
-          const parts = log.content.split(':');
+          const rawContent = log.content || '';
+          
+          // Robustness Check: If content doesn't look like IV:Cipher (no colon), fail early or handle gracefully
+          if (!rawContent.includes(':')) {
+              console.error("Malformed encrypted content (No colon found):", rawContent);
+              // Check if it's potentially just plaintext that was marked encrypted by mistake
+              // If it's short and readable, maybe we just show it? 
+              // No, better to error out securely.
+              throw new Error("Invalid encrypted format. Data may be corrupted.");
+          }
+
+          const parts = rawContent.split(':');
+          
+          // --- Robustness: Handle Mock Data or Legacy Data ---
           if (parts.length !== 2) {
+             // ... (existing mock checks)
+             if (log.id.startsWith('mock-') || log.hash.startsWith('0xMOCK')) {
+                 console.warn("Detected malformed encrypted MOCK log. Bypassing decryption.");
+                 setDecryptedContent(log.content);
+                 return;
+             }
+             
+             // If it's real chain data but malformed
+             console.error("Invalid encrypted format (Split length mismatch):", parts);
              throw new Error("Invalid encrypted format. Data may be corrupted.");
           }
           const [iv, cipherText] = parts;

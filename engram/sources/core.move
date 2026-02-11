@@ -216,7 +216,11 @@ module engram::core {
             mood,
             is_encrypted,
             has_attachment: blob_id.is_some(),
-            content_snippet: if (is_encrypted) { b"[ENCRYPTED]".to_string() } else { content },
+            // CRITICAL FIX: Emit the actual content (whether encrypted ciphertext or plaintext)
+            // The frontend relies on this event stream for data sync.
+            // If we emit "[ENCRYPTED]", the frontend has no way to retrieve the ciphertext to decrypt it.
+            // Privacy is still preserved because 'content' is already encrypted (IV:Cipher) if is_encrypted is true.
+            content_snippet: content,
             media_type,
         });
 

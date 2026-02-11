@@ -21,10 +21,13 @@ import type { TerminalLine } from '@/types/terminal';
 import { useTerminalCommands } from '@/hooks/useTerminalCommands';
 import { useIdentityRegistration } from '@/hooks/useIdentityRegistration';
 
+import { useLogService } from '@/hooks/useLogService';
+
 export function Terminal() {
   const account = useCurrentAccount();
   const { currentUser, login } = useUserStore();
-  const { viewingLogId, setViewingLogId } = useMemoryStore();
+  const { viewingLogId, setViewingLogId, setLogs } = useMemoryStore(); // Added setLogs
+  const { fetchLogs } = useLogService(); // Added fetchLogs
   const [command, setCommand] = useState('');
   
   // Effective connection state (Wallet OR zkLogin)
@@ -103,6 +106,19 @@ export function Terminal() {
              { id: Math.random().toString(), type: 'system', content: `> ACCESS GRANTED. WELCOME BACK.` }
            ]);
         }
+        
+        // --- FETCH LOGS FROM CHAIN (If constructId exists) ---
+        if (currentUser?.constructId) {
+            // Trigger background fetch
+            fetchLogs(currentUser.constructId).then(logs => {
+                if (logs.length > 0) {
+                    setLogs(logs); // Replace local logs with chain data
+                    // Optional: Add notification in terminal?
+                    // setHistory(prev => [...prev, { id: Math.random().toString(), type: 'system', content: `> MEMORY SYNC COMPLETE: ${logs.length} FRAGMENTS RETRIEVED.` }]);
+                }
+            });
+        }
+
       } else {
         // New User -> Start Registration Flow
         if (!isRegistering) {

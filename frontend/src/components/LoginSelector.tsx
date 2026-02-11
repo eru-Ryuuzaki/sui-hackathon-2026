@@ -58,6 +58,11 @@ export function LoginSelector({ isOpen, onClose }: LoginSelectorProps) {
     setIsRedirecting(true);
 
     try {
+      // 0. Generate Randomness & Keys on Frontend (Critical Step)
+      const ephemeralKeyPair = new Ed25519Keypair();
+      const randomness = generateRandomness();
+      // console.log('[ZKLogin] Generated randomness on frontend:', randomness);
+
       // 1. Prepare zkLogin parameters
       const client = new SuiJsonRpcClient({ 
         url: getJsonRpcFullnodeUrl('testnet'),
@@ -66,8 +71,6 @@ export function LoginSelector({ isOpen, onClose }: LoginSelectorProps) {
       const { epoch } = await client.getLatestSuiSystemState();
       const maxEpoch = Number(epoch) + 2; // Valid for ~2 epochs (approx 48h)
       
-      const ephemeralKeyPair = new Ed25519Keypair();
-      const randomness = generateRandomness();
       const nonce = generateNonce(
         ephemeralKeyPair.getPublicKey(), 
         maxEpoch, 

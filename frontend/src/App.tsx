@@ -3,43 +3,17 @@ import { Terminal } from '@/components/Terminal';
 import { HiveMind } from '@/components/HiveMind';
 import { SystemAlert } from '@/components/ui/SystemAlert';
 import { OAuthCallbackHandler } from '@/components/OAuthCallbackHandler';
-import { useEffect } from 'react';
-import { useLogService } from '@/hooks/useLogService';
-import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { GlobalLoader } from '@/components/ui/GlobalLoader';
 import { BalanceWarningModal } from '@/components/BalanceWarningModal';
 
 function App() {
-  const { fetchLogs } = useLogService();
-  const { setLogs, logs: currentLogs } = useMemoryStore();
+  // const { fetchLogs } = useLogService(); // Unused
+  // const { setLogs, logs: currentLogs } = useMemoryStore(); // Unused
 
   // Initial Data Fetch
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const fetchedLogs = await fetchLogs();
-        if (fetchedLogs.length > 0) {
-          // Merge strategy: 
-          // For now, we just prepend/mix. 
-          // If we want to strictly sync, we might want to deduplicate based on ID.
-          // Since useMemoryStore is persisted, it might already have them.
-          // But "Mock Service" simulates a backend. Backend > Local Cache.
-          
-          // Simple deduplication by ID
-          const existingIds = new Set(currentLogs.map(l => l.id));
-          const newLogs = fetchedLogs.filter(l => !existingIds.has(l.id));
-          
-          if (newLogs.length > 0) {
-            setLogs([...newLogs, ...currentLogs]);
-          }
-        }
-      } catch (e) {
-        console.error("Failed to fetch initial logs:", e);
-      }
-    };
-    
-    loadData();
-  }, [fetchLogs]); // Run once on mount (or when service changes)
+  // useEffect(() => {
+    // const loadData = async () => { ... } // Disabled and Unused
+  // }, []); // Run once on mount (or when service changes)
 
   return (
     <div className="h-screen bg-void-black text-neon-cyan font-mono p-4 md:p-8 relative overflow-hidden flex flex-col">

@@ -35,8 +35,8 @@ interface JournalEditorProps {
 
 export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
   // const account = useCurrentAccount(); // Removed direct account dep
-  const { createLog, isMock } = useLogService();
-  const { addLog } = useMemoryStore(); // Still used for optimistic UI updates
+  const { createLog, fetchLogs, isMock } = useLogService();
+  const { setLogs } = useMemoryStore(); // Still used for optimistic UI updates
   const loader = useGlobalLoader();
   
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
@@ -227,43 +227,16 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
         if (result.success) {
             console.log("Log created successfully:", result);
             
-            // Add to Local Store (Client Cache)
-            // If Mock service returns the log object, use it (it has the ID)
-            if (result.log) {
-                // We need to match the signature of addLog or manually construct it
-                // addLog expects Omit<MemoryLog, "id" | "timestamp" | "hash">
-                // But result.log IS a full MemoryLog.
-                // We can just use addLog with the data
-                addLog({
-                    content: finalContent,
-                    category: category,
-                    type: type as any,
-                    hash: result.hash, // Use the real/mock hash
-                    metadata: {
-                        date,
-                        time,
-                        icon,
-                        isEncrypted,
-                        mood,
-                        attachments: validAttachments
-                    }
-                });
-            } else {
-                // Fallback for Real Service (if it doesn't return the full log object yet)
-                addLog({
-                    content: finalContent,
-                    category: category,
-                    type: type as any,
-                    hash: result.hash,
-                    metadata: {
-                        date,
-                        time,
-                        icon,
-                        isEncrypted,
-                        mood,
-                        attachments: validAttachments
-                    }
-                });
+            // Trigger fetch from chain (via Indexer API) immediately
+            // Instead of optimistic local update, we want to fetch the real deal.
+            if (constructId) {
+                 // Fetch logs and replace local store
+                 fetchLogs(constructId).then(logs => {
+                     if (logs.length > 0) {
+                         setLogs(logs);
+                         console.log("Store synced with chain:", logs.length);
+                     }
+                 });
             }
 
             resetForm();

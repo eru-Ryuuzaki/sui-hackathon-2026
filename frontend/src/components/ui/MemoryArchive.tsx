@@ -43,11 +43,16 @@ export function MemoryArchive({ onExit }: MemoryArchiveProps) {
   });
 
   // Filter logs based on search term
-  const filteredLogs = sortedLogs.filter(log => 
-    log.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    log.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    log.type.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredLogs = sortedLogs.filter(log => {
+    const term = searchTerm.toLowerCase();
+    const content = log.content || '';
+    const category = log.category || '';
+    const type = log.type || '';
+    
+    return content.toLowerCase().includes(term) ||
+           category.toLowerCase().includes(term) ||
+           type.toLowerCase().includes(term);
+  });
 
   return (
     <div className="h-full flex flex-col p-4 overflow-hidden font-mono text-xs">
