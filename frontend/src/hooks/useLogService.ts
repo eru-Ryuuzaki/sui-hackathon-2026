@@ -147,6 +147,12 @@ export function useLogService() {
   // Note: Vite env vars are strings. 'true' checks string equality.
   const useMock = import.meta.env.VITE_USE_MOCK === 'true';
 
+  if (useMock) {
+    console.debug("[Engram] Using MOCK Log Service");
+  } else {
+    console.debug("[Engram] Using REAL Sui Log Service");
+  }
+
   const mockService = useMockLogService();
   const suiService = useSuiLogService();
 

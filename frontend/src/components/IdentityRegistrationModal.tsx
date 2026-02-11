@@ -36,9 +36,8 @@ export function IdentityRegistrationModal({ isOpen, onConfirm, defaultCodename =
   const claimFaucet = async (address: string) => {
     setIsClaiming(true);
     try {
-        // Call Backend Faucet API
-        // Assuming backend is running on localhost:3001
-        await axios.post('http://localhost:3001/api/faucet/claim', {
+        // Call Backend Faucet API (Use Proxy)
+        await axios.post('/api/faucet/claim', {
             address: address
         });
         

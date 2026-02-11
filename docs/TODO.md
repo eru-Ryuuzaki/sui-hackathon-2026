@@ -65,3 +65,11 @@
   - [ ] 若未来需支持多图，需修改 Move 合约 `MemoryShard` 结构体为 `vector<String>` 并处理迁移。
   - [ ] 前端 `AttachmentUploader` 已支持多选，但提交逻辑目前仅取第一个。
 - [ ] **Mood 映射优化**: 当前 `MOOD_MAP` 覆盖了基础 Emoji，需根据最终 UI 确定的 Mood 列表进行完善。
+
+## 6. 未来规划 (Future Roadmap)
+
+- [ ] **成就系统 (Achievements / NeuralBadge)**:
+  - [ ] 恢复并实现 `NeuralBadge` 合约逻辑 (目前已从 `core.move` 中移除)。
+  - [ ] 实现 `check_and_mint_badge` 逻辑 (如：First Awakening, 7-Day Streak)。
+  - [ ] 前端展示用户获得的徽章。
+  - [ ] 后端索引徽章数据。

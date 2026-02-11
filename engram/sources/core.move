@@ -65,15 +65,7 @@ module engram::core {
     }
 
     // /// Neural Badge (Achievement NFT)
-    // public struct NeuralBadge has key, store {
-    //    id: UID,
-    //    name: String,
-    //    description: String,
-    //    rarity: u8,
-    //    unlocked_at: u64,
-    // }
-
-    // ================= Events (The Hive Mind Stream) =================
+    // // ================= Events (The Hive Mind Stream) =================
 
     /// Primary source for the "Matrix Rain" visual effect.
     /// Permanent history, cheap gas, no contention.
@@ -233,7 +225,6 @@ module engram::core {
             media_type,
         });
 
-    // check_and_mint_badge(construct, hive, ctx);
     }
 
     /// Set the Escape Pod (Backup Controller)
@@ -270,43 +261,4 @@ module engram::core {
             timestamp: clock::timestamp_ms(clock),
         });
     }
-
-    // /// Internal function to handle achievements
-    // fun check_and_mint_badge(
-    //     construct: &mut Construct,
-    //     hive: &mut HiveState,
-    //     ctx: &mut TxContext
-    // ) {
-    //     // Badge 1: First Awakening
-    //     if (construct.shard_count == 1) {
-    //         let badge_key = string::utf8(b"badge_first_awakening");
-    //         if (!dynamic_object_field::exists_(&construct.id, badge_key)) {
-    //              let badge = NeuralBadge {
-    //                 id: object::new(ctx),
-    //                 name: string::utf8(b"First Awakening"),
-    //                 description: string::utf8(b"Recorded the first memory."),
-    //                 rarity: 1,
-    //                 unlocked_at: 0, 
-    //              };
-    //              dynamic_object_field::add(&mut construct.id, badge_key, badge);
-    //              hive.total_badges_issued = hive.total_badges_issued + 1;
-    //         } 
-    //     };
-
-    //     // Badge 2: The Consistent Mind (7-Day Streak)
-    //     if (construct.streak == 7) {
-    //         let badge_key = string::utf8(b"badge_7_day_streak");
-    //         if (!dynamic_object_field::exists_(&construct.id, badge_key)) {
-    //              let badge = NeuralBadge {
-    //                 id: object::new(ctx),
-    //                 name: string::utf8(b"The Consistent Mind"),
-    //                 description: string::utf8(b"Maintained a 7-day memory streak."),
-    //                 rarity: 3, // Rare
-    //                 unlocked_at: 0, 
-    //              };
-    //              dynamic_object_field::add(&mut construct.id, badge_key, badge);
-    //              hive.total_badges_issued = hive.total_badges_issued + 1;
-    //         } 
-    //     }
-    // }
 }

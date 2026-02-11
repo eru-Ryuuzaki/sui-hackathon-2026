@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLogService } from '@/hooks/useLogService';
 import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { useJournalForm } from '@/hooks/useJournalForm';
@@ -73,6 +73,15 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
     }
   } = useJournalForm();
 
+  // Sync customMessage/customIcon when template changes via useJournalForm
+  // This handles the "Initial Load" and "Category/Type Change" cases
+  useEffect(() => {
+    if (selectedTemplate) {
+        setCustomIcon(selectedTemplate.icon);
+        setCustomMessage(selectedTemplate.msg);
+    }
+  }, [selectedTemplate]);
+
   // Strict Map to Move Contract Enum:
   // 0:System, 1:Protocol, 2:Achievement, 3:Challenge, 4:Dream
   // const CATEGORY_MAP: Record<LogTemplateCategory, number> = {
@@ -104,28 +113,38 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
   const categoryColor = CATEGORY_COLORS[category];
   const validationError = validateDate();
   // Display template message if body is empty, ensuring preview is never blank
-  const displayBody = body || selectedTemplate?.msg || '';
-  // Removed manual truncation to let CSS handle it
-  const sysTrace = `[${date} ${time}][${category.toUpperCase()}]${type}: ${icon} ${displayBody}`;
+  // const displayBody = body || selectedTemplate?.msg || ''; // Removed old logic
+  
+  // Unified Preview Logic
+  // Both AUTO and MANUAL now use customIcon/customMessage for the Header part
+  const sysTrace = `[${date} ${time}][${category.toUpperCase()}]${type}: ${customIcon} ${customMessage}`;
 
   const previewTrace = `[${date} ${time}][${category.toUpperCase()}]${type}: ${customIcon} ${customMessage.slice(0, 30)}${customMessage.length > 30 ? '...' : ''}`;
 
 
   const handleCustomModalConfirm = () => {
     handleIconChange(customIcon);
-    handleBodyChange(customMessage);
+    // Don't overwrite body with customMessage anymore
+    // handleBodyChange(customMessage); 
     setIsCustomModalOpen(false);
   };
 
   const handleManualInit = () => {
       setCustomIcon(icon || '📝');
-      setCustomMessage(''); // Clear body for manual entry
+      // Don't clear customMessage so user can edit it
+      // setCustomMessage(''); 
       setIsCustomModalOpen(true);
   };
   
   const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
       const tmpl = availableTemplates.find(t => `${t.type}-${t.key || 'default'}` === e.target.value);
-      if (tmpl) handleTemplateSelect(tmpl);
+      if (tmpl) {
+          handleTemplateSelect(tmpl);
+          // Set customMessage to template msg for Unified Header Logic
+          setCustomMessage(tmpl.msg);
+          // Set customIcon to template icon
+          setCustomIcon(tmpl.icon);
+      }
   };
 
   // Handle Submit Confirmation
@@ -155,23 +174,11 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
     // Separated by double newline for parsing
     
     // Header Logic:
-    // If Manual mode was used, use customIcon/customMessage as base for header
-    // But wait, the previewTrace logic uses customIcon/customMessage ONLY for the "Manual Preview".
-    // The "Auto Preview" (sysTrace) uses icon/displayBody.
-    // We should probably respect the mode.
+    // Unified: Always use customIcon/customMessage as base for header
+    // In AUTO mode, customMessage/customIcon are populated by the template selection.
+    // In MANUAL mode, they are populated by the modal.
     
-    let headerContent = '';
-    if (mode === 'MANUAL') {
-        // Use custom inputs for header
-        headerContent = `[${date} ${time}][${category.toUpperCase()}]${type}: ${customIcon} ${customMessage}`;
-    } else {
-        // Use auto template logic for header (but use truncated body or template msg)
-        // We want the header to be short. 
-        // If body is huge, sysTrace puts the WHOLE body in. We should truncate it for the header if we are splitting.
-        // OR, we just use the template message as the "summary" if available.
-        const summary = selectedTemplate?.msg || body.slice(0, 50) + (body.length > 50 ? '...' : '');
-        headerContent = `[${date} ${time}][${category.toUpperCase()}]${type}: ${icon} ${summary}`;
-    }
+    const headerContent = `[${date} ${time}][${category.toUpperCase()}]${type}: ${customIcon} ${customMessage}`;
 
     // Combine: Header + \n\n + Body
     const finalContent = `${headerContent}\n\n${body}`;
@@ -605,6 +612,13 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
       {/* Footer Actions */}
       <div className="flex justify-end gap-4 pt-2 border-t border-titanium-grey/30 mt-4 shrink-0">
         <div className="flex items-center gap-2">
+            {/* MOCK Indicator */}
+            {isMock && (
+              <div className="px-2 py-1 bg-yellow-500/20 border border-yellow-500 text-yellow-500 text-[9px] font-bold rounded animate-pulse">
+                MOCK MODE
+              </div>
+            )}
+
             {/* Encryption Toggle */}
             <button 
               onClick={() => setIsEncrypted(!isEncrypted)}

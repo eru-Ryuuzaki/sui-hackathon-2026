@@ -49,15 +49,16 @@ interface HiveMindCalendarProps {
 export function HiveMindCalendar({ logs, isOpen, onDateClick }: HiveMindCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [globalTick, setGlobalTick] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
 
   // --- Global Ticker (2s interval) ---
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || isHovered) return;
     const interval = setInterval(() => {
       setGlobalTick(t => t + 1);
     }, 2000);
     return () => clearInterval(interval);
-  }, [isOpen]);
+  }, [isOpen, isHovered]);
 
   // --- Calendar Grid Generation (Fixed 6 Rows) ---
   const calendarDays = useMemo(() => {
@@ -86,7 +87,11 @@ export function HiveMindCalendar({ logs, isOpen, onDateClick }: HiveMindCalendar
   // if (!isOpen) return null; // Removed Modal Logic
 
   return (
-    <Card className="flex flex-col h-full overflow-hidden relative z-10">
+    <Card 
+      className="flex flex-col h-full overflow-hidden relative z-10"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
         {/* Header */}
         <div className="flex items-center justify-between p-3 border-b border-titanium-grey/30 bg-white/5 shrink-0">
           <div className="flex items-center gap-2">

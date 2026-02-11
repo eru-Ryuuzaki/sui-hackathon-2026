@@ -44,6 +44,7 @@ module engram::core_tests {
                 1, // category
                 false, // is_encrypted
                 option::none(), // blob_id
+                option::none(), // media_type
                 test_scenario::ctx(&mut scenario)
             );
 

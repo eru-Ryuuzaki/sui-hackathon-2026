@@ -440,17 +440,20 @@ export function Terminal() {
                    </div>
                  </motion.div>
                ) : mode === 'JOURNAL' ? (
-                 <motion.div 
-                   key="journal"
-                   initial={{ opacity: 0, rotateY: 90 }}
-                   animate={{ opacity: 1, rotateY: 0 }}
-                   exit={{ opacity: 0, rotateY: -90 }}
-                   transition={{ duration: 0.4 }}
-                   className="absolute inset-0 bg-void-black"
-                 >
-                   <JournalEditor onExit={() => setMode('CLI')} />
-                 </motion.div>
-               ) : mode === 'ARCHIVE' ? (
+                <motion.div 
+                  key="journal"
+                  initial={{ opacity: 0, rotateY: 90 }}
+                  animate={{ opacity: 1, rotateY: 0 }}
+                  exit={{ opacity: 0, rotateY: -90 }}
+                  transition={{ duration: 0.4 }}
+                  className="absolute inset-0 bg-void-black"
+                >
+                  <JournalEditor 
+                    onExit={() => setMode('CLI')} 
+                    constructId={currentUser?.constructId} // Pass constructId from currentUser
+                  />
+                </motion.div>
+              ) : mode === 'ARCHIVE' ? (
                  <motion.div 
                    key="archive"
                    initial={{ opacity: 0, rotateY: 90 }}
