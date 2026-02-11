@@ -37,24 +37,22 @@ export function HiveMind() {
   }, [globalLogs]);
 
   // Convert logs for Calendar (Still uses LOCAL logs as Calendar is personal)
-  const calendarLogs = logs.map(log => ({
-    id: log.id,
-    date: new Date(log.timestamp),
-    content: getSummary(log.content || ''), // Use summary for calendar preview
-    type: log.type,
-    emotionVal: log.metadata?.sentiment || 50,
-    icon: log.metadata?.mood // Use mood as icon if available
-  }));
+  // const calendarLogs = logs.map(log => ({
+  //   id: log.id,
+  //   date: new Date(log.timestamp),
+  //   content: getSummary(log.content || ''), // Use summary for calendar preview
+  //   type: log.type,
+  //   emotionVal: log.metadata?.sentiment || 50,
+  //   icon: log.metadata?.mood // Use mood as icon if available
+  // }));
 
   return (
     <aside className="lg:col-span-3 flex flex-col h-full min-h-0 space-y-4">
       {/* Top: Calendar (Fixed Height ~40%) */}
       <div className="h-[40%] min-h-[300px]">
         <HiveMindCalendar 
-          logs={calendarLogs}
-          isOpen={true}
-          onClose={() => {}} 
-          onDateClick={(date) => {
+          logs={logs}
+          onDateClick={(date: Date) => {
               console.log('Clicked date:', date);
               // Find log for this date and trigger view
               // For simplicity, we pick the first log of that date if multiple exist, 

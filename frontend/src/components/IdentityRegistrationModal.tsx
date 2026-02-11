@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react';
 import { GlitchModal } from '@/components/ui/GlitchModal';
 import { triggerAlert } from '@/components/ui/SystemAlert';
 import { User, Calendar, Cpu, ArrowRight} from 'lucide-react';
-import { useCurrentAccount } from '@mysten/dapp-kit';
 import { useGlobalLoader } from '@/components/ui/GlobalLoader';
-import axios from 'axios';
 
 interface IdentityRegistrationModalProps {
   isOpen: boolean;
@@ -13,7 +11,6 @@ interface IdentityRegistrationModalProps {
 }
 
 export function IdentityRegistrationModal({ isOpen, onConfirm, defaultCodename = '' }: IdentityRegistrationModalProps) {
-  const account = useCurrentAccount();
   const loader = useGlobalLoader();
   const [codename, setCodename] = useState(defaultCodename);
   const [birthday, setBirthday] = useState('2000-01-01'); // Default to Y2K for better UX

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLogService } from '@/hooks/useLogService';
 import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { useJournalForm } from '@/hooks/useJournalForm';
-import { CATEGORY_COLORS, LOG_TEMPLATES, type LogTemplateCategory } from '@/data/logTemplates';
+import { CATEGORY_COLORS, LOG_TEMPLATES } from '@/data/logTemplates';
 import { AttachmentUploader } from '@/components/ui/AttachmentUploader';
 import { useGlobalLoader } from '@/components/ui/GlobalLoader';
 import { 
@@ -86,30 +86,30 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
 
   // Strict Map to Move Contract Enum:
   // 0:System, 1:Protocol, 2:Achievement, 3:Challenge, 4:Dream
-  // const CATEGORY_MAP: Record<LogTemplateCategory, number> = {
-  //   system: 0,
-  //   protocol: 1,
-  //   achievement: 2,
-  //   challenge: 3,
-  //   dream: 4,
-  // };
+  /* const CATEGORY_MAP: Record<LogTemplateCategory, number> = {
+    system: 0,
+    protocol: 1,
+    achievement: 2,
+    challenge: 3,
+    dream: 4,
+  }; */
 
   // Convert Mood String/Emoji to u8 (0-100)
   // Default neutral = 50
-  // const MOOD_MAP: Record<string, number> = {
-  //    '😊': 75,
-  //    '😐': 50,
-  //    '😢': 25,
-  //    '😡': 10,
-  //    '🥳': 90,
-  //    '😴': 40,
-  //    '🤢': 20,
-  //    '🤯': 80,
-  //    '🥶': 30,
-  //    '🥵': 30
-  // };
+  /* const MOOD_MAP: Record<string, number> = {
+     '😊': 75,
+     '😐': 50,
+     '😢': 25,
+     '😡': 10,
+     '🥳': 90,
+     '😴': 40,
+     '🤢': 20,
+     '🤯': 80,
+     '🥶': 30,
+     '🥵': 30
+  }; 
 
-  // const getMoodValue = (m: string) => MOOD_MAP[m] || 50;
+  const getMoodValue = (m: string) => MOOD_MAP[m] || 50; */
 
   // Current Category Color
   const categoryColor = CATEGORY_COLORS[category];
@@ -412,7 +412,7 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
                   <div className="relative">
                     <select 
                       value={category} 
-                      onChange={e => setCategory(e.target.value as LogTemplateCategory)} 
+                      onChange={e => setCategory(e.target.value as any)} 
                       className="w-full bg-void-black border px-2 py-1 outline-none text-white appearance-none uppercase transition-colors duration-300 text-[10px]"
                       style={{ 
                         borderColor: `${categoryColor}80`,

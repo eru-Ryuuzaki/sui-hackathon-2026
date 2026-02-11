@@ -1,9 +1,7 @@
 import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { parseLogTrace } from '@/utils/logHelpers';
 import { XCircle, Image as ImageIcon, Paperclip, Lock, Globe, Download, Eye } from 'lucide-react';
-import { CATEGORY_COLORS, type LogTemplateCategory } from '@/data/logTemplates';
-
-// Helper to separate header and body
+import { CATEGORY_COLORS, type LogTemplateCategory } from '@/data/logTemplates';// Helper to separate header and body
 const splitContent = (content: string) => {
     const parts = content.split('\n\n');
     const header = parts[0];
@@ -36,7 +34,7 @@ export function LogDetails({ onExit }: { onExit: () => void }) {
   const primaryAttachment = metadata.attachments && metadata.attachments.length > 0 ? metadata.attachments[0] : null;
   const WALRUS_AGGREGATOR = "https://aggregator.walrus-testnet.walrus.space/v1";
 
-  const handleAttachmentClick = (blobId: string, _type: string, _action: 'view' | 'download') => {
+  const handleAttachmentClick = (blobId: string) => {
       const url = `${WALRUS_AGGREGATOR}/${blobId}`;
       window.open(url, '_blank');
   };
@@ -120,7 +118,7 @@ export function LogDetails({ onExit }: { onExit: () => void }) {
                         {/* Action Button */}
                         <div className="w-px h-3 bg-titanium-grey/30 mx-1" />
                         <button 
-                            onClick={() => handleAttachmentClick(primaryAttachment.blobId, primaryAttachment.type, 'view')}
+                            onClick={() => handleAttachmentClick(primaryAttachment.blobId)}
                             className="text-titanium-grey hover:text-white transition-colors"
                             title={primaryAttachment.type.startsWith('image/') ? "Preview" : "Download"}
                         >

@@ -1,132 +1,101 @@
-import { useState, useEffect, useMemo } from 'react';
-import { 
-  format, 
-  startOfMonth, 
-  startOfWeek, 
-  isSameMonth, 
-  isSameDay, 
-  addMonths, 
-  subMonths 
-} from 'date-fns';
-import { Card } from '@/components/ui/Card';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { format, isSameMonth, isSameDay, addMonths, subMonths } from 'date-fns';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/utils/cn';
-
-// --- Types ---
-interface CalendarLog {
-  id: string;
-  date: Date;
-  content: string;
-  icon?: string;
-  emotionVal: number; // 0-100
-}
+import type { MemoryLog } from '@/hooks/useMemoryStore';
+import { extractIcon } from '@/utils/logHelpers';
+import { Card } from '@/components/ui/Card';
 
 interface HiveMindCalendarProps {
-  logs: CalendarLog[];
-  isOpen: boolean;
-  onClose: () => void;
+  logs: MemoryLog[];
+  // isOpen: boolean; // Removed unused
+  // onClose: () => void; // Removed unused
   onDateClick: (date: Date) => void;
 }
 
-// --- Helper: Extract Icon ---
-  function extractIcon(log: CalendarLog): string {
-    if (log.icon) return log.icon;
-    
-    // Check if content is empty
-    if (!log.content) return '?';
-    
-    // NEW: Handle split content (Summary is first part)
-    // We only want to search for emojis in the summary, not the whole body
-    const summary = log.content.split('\n\n')[0];
-    
-    // Try regex match emoji
-    const emojiMatch = summary.match(/[\u{1F300}-\u{1F9FF}]/u);
-    if (emojiMatch) return emojiMatch[0];
-  
-    // Fallback to first char
-    return summary.charAt(0).toUpperCase();
-  }
-
-export function HiveMindCalendar({ logs, isOpen, onDateClick }: HiveMindCalendarProps) {
+export function HiveMindCalendar({ logs, onDateClick }: HiveMindCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  // const [isHovered, setIsHovered] = useState(false); // Removed unused
   const [globalTick, setGlobalTick] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
 
-  // --- Global Ticker (2s interval) ---
+  // Global Ticker for rotating logs on the same day
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!isOpen || isHovered) return;
     const interval = setInterval(() => {
       setGlobalTick(t => t + 1);
-    }, 2000);
+    }, 3000);
     return () => clearInterval(interval);
-  }, [isOpen, isHovered]);
+  }, []);
 
-  // --- Calendar Grid Generation (Fixed 6 Rows) ---
-  const calendarDays = useMemo(() => {
-    const monthStart = startOfMonth(currentMonth);
-    const startDate = startOfWeek(monthStart);
-    
-    // Always generate 42 days (6 weeks * 7 days) to keep height constant
-    return Array.from({ length: 42 }).map((_, i) => {
-      const date = new Date(startDate);
-      date.setDate(startDate.getDate() + i);
-      return date;
-    });
-  }, [currentMonth]);
+  // State for Tooltip Portal
+  const [hoveredLog, setHoveredLog] = useState<{ log: MemoryLog; rect: DOMRect } | null>(null);
 
-  // --- Group Logs by Date ---
-  const logsByDate = useMemo(() => {
-    const map = new Map<string, CalendarLog[]>();
-    logs.forEach(log => {
-      const key = format(log.date, 'yyyy-MM-dd');
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(log);
-    });
-    return map;
-  }, [logs]);
+  // Derive calendar days
+  const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+  const startDate = new Date(monthStart);
+  startDate.setDate(startDate.getDate() - startDate.getDay()); // Start from Sunday
 
-  // if (!isOpen) return null; // Removed Modal Logic
+  const calendarDays: Date[] = [];
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + i);
+    calendarDays.push(d);
+  }
+
+  // Group logs by date
+  const logsByDate = new Map<string, MemoryLog[]>();
+  logs.forEach(log => {
+    const d = new Date(log.timestamp);
+    const key = format(d, 'yyyy-MM-dd');
+    if (!logsByDate.has(key)) logsByDate.set(key, []);
+    logsByDate.get(key)!.push(log);
+  });
 
   return (
     <Card 
-      className="flex flex-col h-full overflow-hidden relative z-10"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      className="flex flex-col h-full overflow-hidden relative z-10 bg-void-black/80 backdrop-blur-sm border-none p-4"
     >
-        {/* Header */}
-        <div className="flex items-center justify-between p-3 border-b border-titanium-grey/30 bg-white/5 shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-neon-cyan rounded-full animate-pulse" />
-            <span className="text-neon-cyan text-sm font-heading tracking-widest">
-              CALENDAR // {format(currentMonth, 'yyyy.MM')}
-            </span>
+        {/* Header - Modular Cyberpunk Style */}
+        <div className="flex items-center justify-between mb-6 shrink-0">
+          <div className="flex items-center gap-3">
+            <CalendarIcon size={20} className="text-neon-cyan" />
+            <div className="flex flex-col leading-none">
+               <span className="text-xl font-bold text-neon-cyan font-heading tracking-[0.2em] uppercase">
+                 {format(currentMonth, 'MMMM')}
+               </span>
+               <span className="text-xs text-titanium-grey font-mono tracking-widest">
+                 {format(currentMonth, 'yyyy')}
+               </span>
+            </div>
           </div>
-          <div className="flex items-center gap-1 text-xs font-mono">
+          <div className="flex gap-2">
             <button 
               onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-              className="p-1 hover:text-neon-cyan transition-colors"
+              className="p-2 hover:bg-white/5 rounded-full text-titanium-grey hover:text-neon-cyan transition-all"
             >
-              [&lt;]
+              <ChevronLeft size={16} />
             </button>
             <button 
               onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-              className="p-1 hover:text-neon-cyan transition-colors"
+              className="p-2 hover:bg-white/5 rounded-full text-titanium-grey hover:text-neon-cyan transition-all"
             >
-              [&gt;]
+              <ChevronRight size={16} />
             </button>
           </div>
         </div>
 
-        {/* Grid Header */}
-        <div className="grid grid-cols-7 border-b border-titanium-grey/30 bg-void-black shrink-0">
-          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
-            <div key={`${day}-${i}`} className="py-1 text-center text-[10px] text-titanium-grey font-mono">
+        {/* Grid Header - Minimal */}
+        <div className="grid grid-cols-7 mb-2 shrink-0 px-1">
+          {['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'].map((day, i) => (
+            <div key={`${day}-${i}`} className="text-center text-[10px] text-titanium-grey/60 font-bold tracking-widest">
               {day}
             </div>
           ))}
         </div>
 
-        {/* Grid Body */}
-        <div className="grid grid-cols-7 grid-rows-6 flex-1 bg-void-black/50 min-h-0">
+        {/* Grid Body - Modular Blocks with Gaps */}
+        <div className="grid grid-cols-7 grid-rows-6 flex-1 gap-1.5 min-h-0">
           {calendarDays.map((day) => {
             const dateKey = format(day, 'yyyy-MM-dd');
             const dayLogs = logsByDate.get(dateKey) || [];
@@ -134,63 +103,85 @@ export function HiveMindCalendar({ logs, isOpen, onDateClick }: HiveMindCalendar
             const isToday = isSameDay(day, new Date());
             
             // Ticker Logic
-            const activeLogIndex = dayLogs.length > 0 ? globalTick % dayLogs.length : 0;
-            const activeLog = dayLogs[activeLogIndex];
+  const activeLogIndex = dayLogs.length > 0 ? globalTick % dayLogs.length : 0;
+  const activeLog = dayLogs[activeLogIndex];
 
-            return (
-              <div 
-                key={day.toString()}
+  return (
+    <div 
+      key={day.toString()}
                 onClick={() => onDateClick(day)}
+                onMouseEnter={(e) => {
+                    if (activeLog && isCurrentMonth) {
+                        setHoveredLog({ log: activeLog, rect: e.currentTarget.getBoundingClientRect() });
+                    }
+                }}
+                onMouseLeave={() => setHoveredLog(null)}
                 className={cn(
-                  "relative border-r border-b border-titanium-grey/10 transition-all hover:bg-white/5 cursor-pointer group flex flex-col items-center justify-center",
-                  !isCurrentMonth && "opacity-60 grayscale bg-void-black",
-                  isToday && "shadow-[inset_0_0_10px_rgba(0,243,255,0.2)] bg-neon-cyan/5",
-                  dayLogs.length > 0 && isCurrentMonth && "bg-matrix-green/5"
+                  "relative rounded transition-all duration-300 cursor-pointer group flex flex-col items-center justify-center border",
+                  // Base Styles
+                  "bg-white/5 border-titanium-grey/10 hover:border-neon-cyan/50 hover:bg-white/10 hover:shadow-[0_0_10px_rgba(0,243,255,0.1)]",
+                  // Dim non-current month
+                  !isCurrentMonth && "opacity-30 border-transparent bg-transparent",
+                  // Highlight Today
+                  isToday && "border-neon-cyan bg-neon-cyan/10 shadow-[0_0_15px_rgba(0,243,255,0.2)]",
+                  // Active Log Style
+                  dayLogs.length > 0 && isCurrentMonth && "border-matrix-green/30 bg-matrix-green/5"
                 )}
               >
-                {/* Date Number */}
+                {/* Date Number - Dynamic Positioning */}
                 <div className={cn(
-                  "absolute top-0.5 left-1 text-[9px] font-mono leading-none",
-                  isToday ? "text-neon-cyan font-bold" : "text-titanium-grey/50"
+                  "font-mono leading-none transition-all duration-300 absolute",
+                  activeLog && isCurrentMonth 
+                    ? "top-0.5 left-1 text-[8px] text-white/70" // Has log: Top-left, small, brighter
+                    : "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xs", // No log: Center, normal
+                  isToday && !activeLog && isCurrentMonth && "text-neon-cyan font-bold scale-110",
+                  isToday && activeLog && isCurrentMonth && "text-neon-cyan font-bold",
+                  !isCurrentMonth && "text-titanium-grey/30"
                 )}>
                   {format(day, 'd')}
                 </div>
 
-                {/* Content - Ticker Icon */}
+                {/* Content - Centered Icon */}
                 {activeLog && isCurrentMonth && (
-                  <div className="flex items-center justify-center">
-                    <span className="text-sm filter drop-shadow-[0_0_3px_rgba(0,255,65,0.5)] transition-all duration-500 transform group-hover:scale-110">
+                  <div className="flex items-center justify-center w-full h-full pt-1.5 pl-0.5">
+                    <span className="text-[10px] filter drop-shadow-[0_0_5px_rgba(0,255,65,0.4)] transition-all duration-500 transform group-hover:scale-110 group-hover:-translate-y-0.5">
                       {extractIcon(activeLog)}
                     </span>
                   </div>
                 )}
 
-                {/* Indicators (Dots) */}
+                {/* Multi-log Indicator - Bottom Right Dot */}
                 {dayLogs.length > 1 && isCurrentMonth && (
-                  <div className="absolute bottom-0.5 right-1 flex gap-0.5">
-                    {dayLogs.slice(0, 3).map((_, idx) => (
-                      <div 
-                        key={idx}
-                        className={cn(
-                          "w-0.5 h-0.5 rounded-full",
-                          idx === activeLogIndex ? "bg-neon-cyan" : "bg-titanium-grey/50"
-                        )}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {/* Tooltip */}
-                {activeLog && isCurrentMonth && (
-                  <div className="absolute z-20 bottom-full left-1/2 -translate-x-1/2 mb-1 w-32 p-1.5 bg-void-black/95 border border-titanium-grey text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none backdrop-blur-md shadow-xl">
-                    <div className="text-neon-cyan mb-0.5 font-mono">{format(activeLog.date, 'HH:mm')}</div>
-                    <div className="text-white line-clamp-2 leading-tight">{activeLog.content}</div>
+                  <div className="absolute bottom-1.5 right-1.5 flex gap-0.5">
+                     <div className="w-1 h-1 rounded-full bg-neon-cyan animate-pulse" />
                   </div>
                 )}
               </div>
             );
           })}
         </div>
+
+        {/* Portal Tooltip */}
+        {hoveredLog && createPortal(
+            <div 
+                className="fixed z-[9999] pointer-events-none w-40 p-2 bg-void-black/90 border border-neon-cyan/30 text-[10px] rounded shadow-[0_0_20px_rgba(0,0,0,0.8)] backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200"
+                style={{
+                    top: hoveredLog.rect.top - 10, // Just above the cell
+                    left: hoveredLog.rect.left + (hoveredLog.rect.width / 2),
+                    transform: 'translate(-50%, -100%)'
+                }}
+            >
+                <div className="flex justify-between items-center mb-1 border-b border-white/10 pb-1">
+                    <span className="text-neon-cyan font-bold font-mono">{format(new Date(hoveredLog.log.timestamp), 'HH:mm')}</span>
+                    <span className="text-[8px] text-titanium-grey bg-white/10 px-1 rounded">LOG</span>
+                </div>
+                <div className="text-white leading-relaxed line-clamp-3">{hoveredLog.log.content}</div>
+                
+                {/* Tiny triangle pointer */}
+                <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-void-black border-r border-b border-neon-cyan/30 transform rotate-45" />
+            </div>,
+            document.body
+        )}
     </Card>
   );
 }

@@ -37,3 +37,20 @@ export const parseLogTrace = (trace: string) => {
   }
   return null;
 };
+
+// 3. Extract Icon from Log
+export const extractIcon = (log: any): string => {
+    if (log.metadata?.icon) return log.metadata.icon;
+    if (log.metadata?.mood) return log.metadata.mood;
+    
+    // Fallback: Try to parse from content trace
+    const parsed = parseLogTrace(log.content.split('\n\n')[0]);
+    if (parsed && parsed.message) {
+        // Assume icon is the first character or emoji in message
+        // This is a rough heuristic
+        const firstChar = parsed.message.trim().substring(0, 2); 
+        return firstChar;
+    }
+    
+    return '📝';
+};
