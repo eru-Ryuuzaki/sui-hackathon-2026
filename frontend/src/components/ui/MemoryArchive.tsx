@@ -5,12 +5,23 @@ import { cn } from '@/utils/cn';
 import { XCircle, List, Search, Image as ImageIcon, FileText, Paperclip } from 'lucide-react';
 import { useState } from 'react';
 
+// NEW: Helper to split content
+const getSummary = (content: string) => {
+  // If we have double newline, split and take first part.
+  // Or just take the first line if no double newline.
+  const parts = content.split('\n\n');
+  if (parts.length > 1) return parts[0];
+  
+  // Fallback: first line
+  return content.split('\n')[0];
+};
+
 interface MemoryArchiveProps {
   onExit: () => void;
 }
 
 export function MemoryArchive({ onExit }: MemoryArchiveProps) {
-  const { logs } = useMemoryStore();
+  const { logs, setViewingLogId } = useMemoryStore();
   const [searchTerm, setSearchTerm] = useState('');
 
   // Filter logs based on search term
@@ -56,7 +67,11 @@ export function MemoryArchive({ onExit }: MemoryArchiveProps) {
             </div>
         ) : (
             filteredLogs.map((log) => (
-                <div key={log.id} className="bg-white/5 border border-titanium-grey/20 p-3 rounded hover:border-neon-cyan/50 transition-colors group relative overflow-hidden">
+                <div 
+                    key={log.id} 
+                    onClick={() => setViewingLogId(log.id)}
+                    className="bg-white/5 border border-titanium-grey/20 p-3 rounded hover:border-neon-cyan/50 transition-colors group relative overflow-hidden cursor-pointer"
+                >
                     {/* Decorative Scanline */}
                     <div className="absolute top-0 left-0 w-full h-[1px] bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
 
@@ -83,7 +98,7 @@ export function MemoryArchive({ onExit }: MemoryArchiveProps) {
                     </div>
                     
                     <div className="text-xs text-white break-words pl-3 border-l-2 border-titanium-grey/30 group-hover:border-neon-cyan transition-colors py-1 leading-relaxed">
-                        {log.content}
+                        {getSummary(log.content)}
                     </div>
 
                     {/* Attachment Icons based on Media Type */}

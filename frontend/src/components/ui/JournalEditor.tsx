@@ -1,11 +1,9 @@
 import { useState } from 'react';
-import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
+import { useLogService } from '@/hooks/useLogService';
 import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { useJournalForm } from '@/hooks/useJournalForm';
-import { useSponsoredTransaction } from '@/hooks/useSponsoredTransaction';
 import { CATEGORY_COLORS, LOG_TEMPLATES, type LogTemplateCategory } from '@/data/logTemplates';
 import { AttachmentUploader } from '@/components/ui/AttachmentUploader';
-import { buildEngraveTx } from '@/utils/sui/transactions';
 import { 
   Terminal as TerminalIcon, 
   Activity, 
@@ -35,10 +33,9 @@ interface JournalEditorProps {
 }
 
 export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
-  const account = useCurrentAccount();
-  const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
-  const { executeSponsoredTx } = useSponsoredTransaction(); // Use Sponsored Hook
-  const { addLog } = useMemoryStore(); // Still used for local optimism/fallback
+  // const account = useCurrentAccount(); // Removed direct account dep
+  const { createLog, isMock } = useLogService();
+  const { addLog } = useMemoryStore(); // Still used for optimistic UI updates
   
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [customIcon, setCustomIcon] = useState('📝');
@@ -78,30 +75,30 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
 
   // Strict Map to Move Contract Enum:
   // 0:System, 1:Protocol, 2:Achievement, 3:Challenge, 4:Dream
-  const CATEGORY_MAP: Record<LogTemplateCategory, number> = {
-    system: 0,
-    protocol: 1,
-    achievement: 2,
-    challenge: 3,
-    dream: 4,
-  };
+  // const CATEGORY_MAP: Record<LogTemplateCategory, number> = {
+  //   system: 0,
+  //   protocol: 1,
+  //   achievement: 2,
+  //   challenge: 3,
+  //   dream: 4,
+  // };
 
   // Convert Mood String/Emoji to u8 (0-100)
   // Default neutral = 50
-  const MOOD_MAP: Record<string, number> = {
-     '😊': 75,
-     '😐': 50,
-     '😢': 25,
-     '😡': 10,
-     '🥳': 90,
-     '😴': 40,
-     '🤢': 20,
-     '🤯': 80,
-     '🥶': 30,
-     '🥵': 30
-  };
+  // const MOOD_MAP: Record<string, number> = {
+  //    '😊': 75,
+  //    '😐': 50,
+  //    '😢': 25,
+  //    '😡': 10,
+  //    '🥳': 90,
+  //    '😴': 40,
+  //    '🤢': 20,
+  //    '🤯': 80,
+  //    '🥶': 30,
+  //    '🥵': 30
+  // };
 
-  const getMoodValue = (m: string) => MOOD_MAP[m] || 50;
+  // const getMoodValue = (m: string) => MOOD_MAP[m] || 50;
 
   // Current Category Color
   const categoryColor = CATEGORY_COLORS[category];
@@ -118,8 +115,6 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
     handleIconChange(customIcon);
     handleBodyChange(customMessage);
     setIsCustomModalOpen(false);
-    // Ensure we stay in MANUAL mode if confirmed
-    setMode('MANUAL');
   };
 
   const handleManualInit = () => {
@@ -153,10 +148,33 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
 
   // Actual Upload Logic (Renamed from handleUpload)
   const executeUpload = async () => {
-    if (!account) return;
+    // if (!account) return; // Service handles auth check if needed, or we can check here
     
     // Display Body logic same as preview
-    const finalContent = body || selectedTemplate?.msg || '';
+    // Now we combine Header (sysTrace/previewTrace) and Body (body) into one content string
+    // Separated by double newline for parsing
+    
+    // Header Logic:
+    // If Manual mode was used, use customIcon/customMessage as base for header
+    // But wait, the previewTrace logic uses customIcon/customMessage ONLY for the "Manual Preview".
+    // The "Auto Preview" (sysTrace) uses icon/displayBody.
+    // We should probably respect the mode.
+    
+    let headerContent = '';
+    if (mode === 'MANUAL') {
+        // Use custom inputs for header
+        headerContent = `[${date} ${time}][${category.toUpperCase()}]${type}: ${customIcon} ${customMessage}`;
+    } else {
+        // Use auto template logic for header (but use truncated body or template msg)
+        // We want the header to be short. 
+        // If body is huge, sysTrace puts the WHOLE body in. We should truncate it for the header if we are splitting.
+        // OR, we just use the template message as the "summary" if available.
+        const summary = selectedTemplate?.msg || body.slice(0, 50) + (body.length > 50 ? '...' : '');
+        headerContent = `[${date} ${time}][${category.toUpperCase()}]${type}: ${icon} ${summary}`;
+    }
+
+    // Combine: Header + \n\n + Body
+    const finalContent = `${headerContent}\n\n${body}`;
 
     const validAttachments = attachments
     .filter(a => a.status === 'uploaded' && a.blobId)
@@ -169,67 +187,86 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
         encryptionIv: a.encryptionIv
     }));
 
-    // Optimistic Update (Local State)
-    addLog({
-        content: finalContent,
-        category: category,
-        type: type as any,
-        metadata: {
-            date,
-            time,
-            icon,
-            isEncrypted,
-            mood,
-            attachments: validAttachments
-        }
-    });
+    // Optimistic Update (Local State) - STILL DOING THIS FOR INSTANT FEEDBACK
+    // But we might want to wait for "Mock" success if we want to simulate delay strictly
+    // For now, let's keep it instant for better UX, or move it after await if user wants "loading"
+    // User asked for "submit -> update calendar", implying a flow.
+    // Let's SHOW LOADING STATE instead of instant optimistic update for better "simulation" feel
+    // But existing code did optimistic. Let's keep optimistic for now, but maybe add a spinner?
+    
+    // Actually, let's wait for the service to return to "Simulate" the delay properly
+    // addLog({ ... }); <--- Moved down
 
     try {
         if (!constructId) {
              throw new Error("Construct ID is missing");
         }
+        
+        // Show some loading indicator here?
+        // For now, we just await
+        console.log("Submitting log via Service (Mock: " + isMock + ")...");
 
-        // Construct Transaction
-        // Current limitation: Move contract only accepts ONE blob_id and ONE media_type
-        // We take the first attachment if available.
-        const primaryAttachment = attachments.length > 0 ? attachments[0] : undefined;
-
-        const tx = buildEngraveTx(
+        const result = await createLog({
             constructId,
-            finalContent,
-            getMoodValue(mood), // Converted Mood
-            CATEGORY_MAP[category], // Correct Category Enum
+            content: finalContent,
+            category,
+            type,
+            mood,
             isEncrypted,
-            primaryAttachment?.blobId,
-            primaryAttachment?.type // Pass Media Type
-        );
+            attachments: validAttachments
+        });
 
-        // Try Sponsored Transaction First
-        try {
-           console.log('Attempting Sponsored Transaction...');
-           await executeSponsoredTx(tx);
-           console.log('Sponsored Transaction Success');
-           resetForm();
-           onExit();
-           return;
-        } catch (sponsorErr) {
-           console.warn('Sponsored Transaction failed, falling back to wallet pay:', sponsorErr);
-           // Fallback to self-pay if sponsorship fails (e.g. limit reached)
-           await signAndExecuteTransaction({ transaction: tx }, {
-                onSuccess: (result) => {
-                    console.log('Engraved successfully (Self-Pay):', result);
-                    resetForm();
-                    onExit();
-                },
-                onError: (err) => {
-                    console.error('Engraving failed:', err);
-                    // Ideally rollback optimistic update here
-                }
-           });
+        if (result.success) {
+            console.log("Log created successfully:", result);
+            
+            // Add to Local Store (Client Cache)
+            // If Mock service returns the log object, use it (it has the ID)
+            if (result.log) {
+                // We need to match the signature of addLog or manually construct it
+                // addLog expects Omit<MemoryLog, "id" | "timestamp" | "hash">
+                // But result.log IS a full MemoryLog.
+                // We can just use addLog with the data
+                addLog({
+                    content: finalContent,
+                    category: category,
+                    type: type as any,
+                    hash: result.hash, // Use the real/mock hash
+                    metadata: {
+                        date,
+                        time,
+                        icon,
+                        isEncrypted,
+                        mood,
+                        attachments: validAttachments
+                    }
+                });
+            } else {
+                // Fallback for Real Service (if it doesn't return the full log object yet)
+                addLog({
+                    content: finalContent,
+                    category: category,
+                    type: type as any,
+                    hash: result.hash,
+                    metadata: {
+                        date,
+                        time,
+                        icon,
+                        isEncrypted,
+                        mood,
+                        attachments: validAttachments
+                    }
+                });
+            }
+
+            resetForm();
+            onExit();
+        } else {
+            console.error("Log creation failed:", result.error);
+            // Trigger error alert?
         }
 
     } catch (e) {
-        console.error("Failed to build transaction:", e);
+        console.error("Failed to execute upload:", e);
     }
   };
 

@@ -6,8 +6,14 @@ import { NeuralOscilloscope } from '@/components/ui/NeuralOscilloscope';
 import { useState, useEffect } from 'react';
 import { useGlobalHiveMind } from '@/hooks/useGlobalHiveMind';
 
+// Helper for splitting content
+const getSummary = (content: string) => {
+  const parts = content.split('\n\n');
+  return parts[0];
+};
+
 export function HiveMind() {
-  const { logs } = useMemoryStore(); // Local logs for Calendar
+  const { logs, setViewingLogId } = useMemoryStore(); // Local logs for Calendar
   const { globalLogs } = useGlobalHiveMind(); // Global logs for Feed
   
   const [pulse, setPulse] = useState<{ active: boolean, intensity: number, mood: 'calm' | 'alert' | 'creative' }>({
@@ -34,7 +40,7 @@ export function HiveMind() {
   const calendarLogs = logs.map(log => ({
     id: log.id,
     date: new Date(log.timestamp),
-    content: log.content || '',
+    content: getSummary(log.content || ''), // Use summary for calendar preview
     type: log.type,
     emotionVal: log.metadata?.sentiment || 50,
     icon: log.metadata?.mood // Use mood as icon if available
@@ -48,7 +54,26 @@ export function HiveMind() {
           logs={calendarLogs}
           isOpen={true}
           onClose={() => {}} 
-          onDateClick={(date) => console.log('Clicked date:', date)}
+          onDateClick={(date) => {
+              console.log('Clicked date:', date);
+              // Find log for this date and trigger view
+              // For simplicity, we pick the first log of that date if multiple exist, 
+              // or handle the calendar click to show a mini-list then detail.
+              // Given the requirement "click logs item... click calendar icon", 
+              // we probably want to find the log associated with that specific point or day.
+              
+              // Find ANY log on this day to start with
+              const targetLog = logs.find(l => {
+                  const d = new Date(l.timestamp);
+                  return d.getDate() === date.getDate() && 
+                         d.getMonth() === date.getMonth() && 
+                         d.getFullYear() === date.getFullYear();
+              });
+              
+              if (targetLog) {
+                  setViewingLogId(targetLog.id);
+              }
+          }}
         />
       </div>
 
@@ -70,7 +95,7 @@ export function HiveMind() {
           </div>
           
           <div className="space-y-3 overflow-hidden flex-1 min-h-0 mask-image-gradient-b p-3 pt-2">
-             {globalLogs.slice(0, 3).map((log, index) => { // Use GLOBAL logs here
+             {globalLogs.slice(0, 4).map((log, index) => { // Use GLOBAL logs here
                let containerClass = "p-3 border-l-2 transition-all duration-300 group/item backdrop-blur-sm ";
                let textClass = "text-xs font-mono transition-colors ";
                let subjectClass = "font-bold text-[10px] mb-1 transition-colors ";
@@ -106,8 +131,8 @@ export function HiveMind() {
                      <div className={actionClass}>{format(new Date(log.timestamp), 'HH:mm:ss')}</div>
                    </div>
                    <div className={textClass}>
-                     {log.content}
-                   </div>
+                    {getSummary(log.content)}
+                  </div>
                    <div className="flex justify-between items-end mt-1">
                       <div className={hashClass}>{log.hash}</div>
                       {/* Global logs might not have attachments viewer for now to keep it lightweight */}

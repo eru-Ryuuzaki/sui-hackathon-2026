@@ -11,6 +11,7 @@ import { MatrixRain } from '@/components/ui/MatrixRain';
 import { CyberAvatar } from '@/components/ui/CyberAvatar';
 import { JournalEditor } from '@/components/ui/JournalEditor';
 import { MemoryArchive } from '@/components/ui/MemoryArchive';
+import { LogDetails } from '@/components/ui/LogDetails';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Terminal as TerminalIcon, PlusSquare, Trash2, Activity, XCircle, List } from 'lucide-react';
 import { IdentityRegistrationModal } from '@/components/IdentityRegistrationModal';
@@ -24,7 +25,7 @@ interface TerminalLine {
 export function Terminal() {
   const account = useCurrentAccount();
   const { currentUser, login, register, updateBirthday } = useUserStore();
-  const { addLog } = useMemoryStore();
+  const { addLog, viewingLogId, setViewingLogId } = useMemoryStore();
   const [command, setCommand] = useState('');
   
   // Effective connection state (Wallet OR zkLogin)
@@ -42,8 +43,18 @@ export function Terminal() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [showMatrix, setShowMatrix] = useState(false);
 
-  // Mode State (CLI vs Journal vs Archive)
-  const [mode, setMode] = useState<'CLI' | 'JOURNAL' | 'ARCHIVE'>('CLI');
+  // Mode State (CLI vs Journal vs Archive vs Detail)
+  const [mode, setMode] = useState<'CLI' | 'JOURNAL' | 'ARCHIVE' | 'DETAIL'>('CLI');
+
+  // Watch for viewingLogId to trigger Detail Mode
+  useEffect(() => {
+    if (viewingLogId) {
+        setMode('DETAIL');
+    } else if (mode === 'DETAIL') {
+        // If viewingLogId cleared while in DETAIL, go back
+        setMode('ARCHIVE'); // Default back to Archive as it's most likely source
+    }
+  }, [viewingLogId]);
 
   useEffect(() => {
     if (mode === 'CLI') {
@@ -329,7 +340,10 @@ export function Terminal() {
               <div className="flex gap-2">
                  {mode !== 'CLI' ? (
                    <button 
-                     onClick={() => setMode('CLI')}
+                     onClick={() => {
+                         if (mode === 'DETAIL') setViewingLogId(null); // Clear viewing state
+                         setMode('CLI');
+                     }}
                      className="text-[10px] flex items-center gap-1 px-2 py-1 rounded border border-glitch-red/50 text-glitch-red hover:bg-glitch-red/10 transition-colors"
                    >
                      <XCircle size={10} /> CANCEL
@@ -436,7 +450,7 @@ export function Terminal() {
                  >
                    <JournalEditor onExit={() => setMode('CLI')} />
                  </motion.div>
-               ) : (
+               ) : mode === 'ARCHIVE' ? (
                  <motion.div 
                    key="archive"
                    initial={{ opacity: 0, rotateY: 90 }}
@@ -446,6 +460,17 @@ export function Terminal() {
                    className="absolute inset-0 bg-void-black"
                  >
                    <MemoryArchive onExit={() => setMode('CLI')} />
+                 </motion.div>
+               ) : (
+                 <motion.div 
+                   key="detail"
+                   initial={{ opacity: 0, rotateY: 90 }}
+                   animate={{ opacity: 1, rotateY: 0 }}
+                   exit={{ opacity: 0, rotateY: -90 }}
+                   transition={{ duration: 0.4 }}
+                   className="absolute inset-0 bg-void-black"
+                 >
+                   <LogDetails onExit={() => setViewingLogId(null)} />
                  </motion.div>
                )}
              </AnimatePresence>

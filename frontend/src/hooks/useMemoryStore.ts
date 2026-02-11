@@ -32,9 +32,12 @@ export interface MemoryLog {
 
 interface MemoryStore {
   logs: MemoryLog[];
+  viewingLogId: string | null;
   addLog: (
     log: Omit<MemoryLog, "id" | "timestamp" | "hash"> & { hash?: string },
   ) => void;
+  setLogs: (logs: MemoryLog[]) => void;
+  setViewingLogId: (id: string | null) => void;
   clearLogs: () => void;
 }
 
@@ -62,6 +65,7 @@ export const useMemoryStore = create<MemoryStore>()(
   persist(
     (set) => ({
       logs: SYSTEM_LOGS,
+      viewingLogId: null,
 
       addLog: (newLog) =>
         set((state) => {
@@ -76,6 +80,10 @@ export const useMemoryStore = create<MemoryStore>()(
           // Add to beginning of array (newest first)
           return { logs: [log, ...state.logs] };
         }),
+
+      setLogs: (logs) => set({ logs }),
+
+      setViewingLogId: (id) => set({ viewingLogId: id }),
 
       clearLogs: () => set({ logs: [] }),
     }),

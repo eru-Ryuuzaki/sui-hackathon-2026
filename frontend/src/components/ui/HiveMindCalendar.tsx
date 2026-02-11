@@ -28,17 +28,23 @@ interface HiveMindCalendarProps {
 }
 
 // --- Helper: Extract Icon ---
-function extractIcon(log: CalendarLog): string {
-  if (log.icon) return log.icon;
-  if (!log.content) return '?';
+  function extractIcon(log: CalendarLog): string {
+    if (log.icon) return log.icon;
+    
+    // Check if content is empty
+    if (!log.content) return '?';
+    
+    // NEW: Handle split content (Summary is first part)
+    // We only want to search for emojis in the summary, not the whole body
+    const summary = log.content.split('\n\n')[0];
+    
+    // Try regex match emoji
+    const emojiMatch = summary.match(/[\u{1F300}-\u{1F9FF}]/u);
+    if (emojiMatch) return emojiMatch[0];
   
-  // Try regex match emoji
-  const emojiMatch = log.content.match(/[\u{1F300}-\u{1F9FF}]/u);
-  if (emojiMatch) return emojiMatch[0];
-
-  // Fallback to first char
-  return log.content.charAt(0).toUpperCase();
-}
+    // Fallback to first char
+    return summary.charAt(0).toUpperCase();
+  }
 
 export function HiveMindCalendar({ logs, isOpen, onDateClick }: HiveMindCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -80,7 +86,7 @@ export function HiveMindCalendar({ logs, isOpen, onDateClick }: HiveMindCalendar
   // if (!isOpen) return null; // Removed Modal Logic
 
   return (
-    <Card className="flex flex-col h-full overflow-hidden border-b-0 rounded-b-none relative z-10">
+    <Card className="flex flex-col h-full overflow-hidden relative z-10">
         {/* Header */}
         <div className="flex items-center justify-between p-3 border-b border-titanium-grey/30 bg-white/5 shrink-0">
           <div className="flex items-center gap-2">
@@ -132,7 +138,7 @@ export function HiveMindCalendar({ logs, isOpen, onDateClick }: HiveMindCalendar
                 onClick={() => onDateClick(day)}
                 className={cn(
                   "relative border-r border-b border-titanium-grey/10 transition-all hover:bg-white/5 cursor-pointer group flex flex-col items-center justify-center",
-                  !isCurrentMonth && "opacity-20 grayscale bg-void-black",
+                  !isCurrentMonth && "opacity-60 grayscale bg-void-black",
                   isToday && "shadow-[inset_0_0_10px_rgba(0,243,255,0.2)] bg-neon-cyan/5",
                   dayLogs.length > 0 && isCurrentMonth && "bg-matrix-green/5"
                 )}
