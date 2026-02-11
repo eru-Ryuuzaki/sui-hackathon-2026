@@ -46,7 +46,7 @@ export function IdentityRegistrationModal({ isOpen, onConfirm, defaultCodename =
         triggerAlert({ 
             type: 'success', 
             title: 'NEWBIE GRANT RECEIVED', 
-            message: '0.1 SUI has been transferred for your first Engraving.',
+            message: '0.25 SUI has been transferred for your first Engraving.',
             duration: 5000 
         });
     } catch (error) {
@@ -87,15 +87,15 @@ export function IdentityRegistrationModal({ isOpen, onConfirm, defaultCodename =
       isOpen={isOpen} 
       onClose={() => {}} // Prevent closing without submission
       title="IDENTITY PROTOCOL"
-      className="max-w-md border-neon-cyan/50 shadow-[0_0_50px_rgba(0,243,255,0.15)]"
+      className="max-w-md border-neon-cyan/50 shadow-[0_0_50px_rgba(0,243,255,0.15)] relative overflow-hidden"
     >
-      <div className="space-y-6 font-mono">
+      <div className="space-y-6 font-mono relative z-10">
         <div className="text-xs text-titanium-grey border-l-2 border-neon-cyan pl-2 py-1">
           &gt; UNREGISTERED CONSCIOUSNESS DETECTED.<br/>
           &gt; PLEASE ESTABLISH YOUR DIGITAL IDENTITY.
           {hasClaimed && (
              <div className="text-matrix-green mt-1 animate-pulse">
-                &gt; NEWBIE GRANT RECEIVED: +0.1 SUI
+                &gt; NEWBIE GRANT RECEIVED: +0.25 SUI
              </div>
           )}
         </div>

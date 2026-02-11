@@ -14,9 +14,9 @@ export class FaucetService {
   private suiClient: SuiClient;
   private adminKeypair: Ed25519Keypair;
   
-  // Claim Amount: 0.1 SUI
-  private readonly CLAIM_AMOUNT_SUI = 0.1;
-  private readonly CLAIM_AMOUNT_MIST = 100_000_000; // 0.1 * 10^9
+  // Claim Amount: 0.25 SUI
+  private readonly CLAIM_AMOUNT_SUI = 0.25;
+  private readonly CLAIM_AMOUNT_MIST = 250_000_000; // 0.25 * 10^9
 
   constructor(
     @InjectRepository(FaucetRecord)

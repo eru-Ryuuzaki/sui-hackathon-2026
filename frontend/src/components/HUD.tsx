@@ -38,8 +38,8 @@ export function HUD() {
   );
 
   // Debugging: Log balance data
-  console.log('Wallet Address:', account?.address);
-  console.log('Balance Data:', balanceData);
+  // console.log('Wallet Address:', account?.address);
+  // console.log('Balance Data:', balanceData);
 
   // ... rest of logic ...
   // Determine effective connection state (Wallet OR zkLogin)
@@ -49,7 +49,7 @@ export function HUD() {
   
   // Calculate Energy (10 Bars)
   const energyState = useMemo(() => {
-    if (!balanceData) return { bars: 0, text: '0 SUI' };
+    if (!balanceData) return { bars: 0, text: '0 SUI', level: 'low' };
     
     const rawBalance = BigInt(balanceData.totalBalance);
     const sui = Number(rawBalance) / 1_000_000_000; // MIST to SUI
@@ -58,9 +58,14 @@ export function HUD() {
     // 0.1 SUI = 1 Bar
     const bars = Math.min(10, Math.floor(sui * 10)); 
     
+    let level = 'normal';
+    if (sui < 0.1) level = 'critical'; // < 0.1 SUI (Red)
+    else if (sui < 0.2) level = 'warning'; // 0.1 <= sui < 0.2 SUI (Yellow)
+
     return {
       bars,
-      text: formatBalance(rawBalance) + ' SUI'
+      text: formatBalance(rawBalance) + ' SUI',
+      level
     };
   }, [balanceData]);
 
@@ -109,7 +114,10 @@ export function HUD() {
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       
       <Card className="shrink-0">
-        <h1 className="text-3xl font-bold mb-2 font-heading tracking-widest text-white drop-shadow-[0_0_5px_rgba(0,243,255,0.8)]">ENGRAM</h1>
+        <div className="flex items-center gap-3 mb-2">
+            <img src="/favicon.png" alt="Engram Logo" className="w-8 h-8 drop-shadow-[0_0_5px_rgba(0,243,255,0.5)]" />
+            <h1 className="text-3xl font-bold font-heading tracking-widest text-white drop-shadow-[0_0_5px_rgba(0,243,255,0.8)]">ENGRAM</h1>
+        </div>
         <div className="text-xs text-titanium-grey mb-4 flex items-center gap-2">
            <span>Ver 1.0.0</span>
            <span className="w-1 h-1 bg-neon-cyan rounded-full animate-pulse" />
@@ -222,16 +230,22 @@ export function HUD() {
                   </div>
                 </div>
                 <div className="flex gap-0.5">
-                  {[...Array(10)].map((_, i) => (
+                  {[...Array(10)].map((_, i) => {
+                    // Color Logic
+                    let barColor = 'bg-neon-cyan shadow-[0_0_5px_#00f3ff]'; // Default
+                    if (energyState.level === 'warning') barColor = 'bg-acid-yellow shadow-[0_0_5px_#f0f]';
+                    if (energyState.level === 'critical') barColor = 'bg-glitch-red shadow-[0_0_5px_#f00] animate-pulse';
+
+                    return (
                     <div 
                       key={i} 
                       className={`w-full h-3 transition-all duration-500 ${
                         i < stats.energy 
-                          ? 'bg-neon-cyan shadow-[0_0_5px_#00f3ff]' 
+                          ? barColor
                           : 'border border-titanium-grey bg-transparent opacity-30'
                       }`} 
                     />
-                  ))}
+                  )})}
                 </div>
               </div>
             </>
