@@ -35,6 +35,10 @@ export class SuiService implements OnModuleInit {
     }
   }
 
+  getSigner(): Ed25519Keypair | null {
+    return this.signer;
+  }
+
   getClient(): SuiClient {
     return this.client;
   }

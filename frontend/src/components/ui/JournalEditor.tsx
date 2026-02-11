@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { useMemoryStore } from '@/hooks/useMemoryStore';
 import { useJournalForm } from '@/hooks/useJournalForm';
+import { useSponsoredTransaction } from '@/hooks/useSponsoredTransaction';
 import { CATEGORY_COLORS, LOG_TEMPLATES, type LogTemplateCategory } from '@/data/logTemplates';
 import { AttachmentUploader } from '@/components/ui/AttachmentUploader';
 import { buildEngraveTx } from '@/utils/sui/transactions';
@@ -36,6 +37,7 @@ interface JournalEditorProps {
 export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
   const account = useCurrentAccount();
   const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
+  const { executeSponsoredTx } = useSponsoredTransaction(); // Use Sponsored Hook
   const { addLog } = useMemoryStore(); // Still used for local optimism/fallback
   
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
@@ -202,17 +204,30 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
             primaryAttachment?.type // Pass Media Type
         );
 
-        await signAndExecuteTransaction({ transaction: tx }, {
-            onSuccess: (result) => {
-                console.log('Engraved successfully:', result);
-                resetForm();
-                onExit();
-            },
-            onError: (err) => {
-                console.error('Engraving failed:', err);
-                // Ideally rollback optimistic update here
-            }
-        });
+        // Try Sponsored Transaction First
+        try {
+           console.log('Attempting Sponsored Transaction...');
+           await executeSponsoredTx(tx);
+           console.log('Sponsored Transaction Success');
+           resetForm();
+           onExit();
+           return;
+        } catch (sponsorErr) {
+           console.warn('Sponsored Transaction failed, falling back to wallet pay:', sponsorErr);
+           // Fallback to self-pay if sponsorship fails (e.g. limit reached)
+           await signAndExecuteTransaction({ transaction: tx }, {
+                onSuccess: (result) => {
+                    console.log('Engraved successfully (Self-Pay):', result);
+                    resetForm();
+                    onExit();
+                },
+                onError: (err) => {
+                    console.error('Engraving failed:', err);
+                    // Ideally rollback optimistic update here
+                }
+           });
+        }
+
     } catch (e) {
         console.error("Failed to build transaction:", e);
     }

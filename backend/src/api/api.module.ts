@@ -11,6 +11,8 @@ import { NeuralBadge } from '../entities/neural-badge.entity';
 import { FaucetRecord } from '../entities/faucet-record.entity';
 import { MemoryService } from '../services/memory.service';
 import { FaucetService } from '../services/faucet.service';
+import { GasStationService } from '../services/gas-station.service';
+import { GasStationController } from './gas-station.controller';
 
 @Module({
   imports: [
@@ -18,6 +20,7 @@ import { FaucetService } from '../services/faucet.service';
   ],
   controllers: [
     FaucetController,
+    GasStationController,
     HiveController,
     MemoryController,
     ConstructController,
@@ -26,6 +29,7 @@ import { FaucetService } from '../services/faucet.service';
   providers: [
     MemoryService,
     FaucetService,
+    GasStationService,
   ],
 })
 export class ApiModule {}
