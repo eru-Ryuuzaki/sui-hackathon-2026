@@ -55,8 +55,37 @@ export function useTerminalCommands({
                 <div className="pl-4 text-neon-cyan">clear             - Clear terminal history</div>
                 <div className="pl-4 text-neon-cyan">status            - Check construct status</div>
                 <div className="pl-4 text-neon-cyan">whoami            - Show current subject info</div>
+                <div className="pl-4 text-neon-cyan">guide             - UI Terminology Guide</div>
                 <div className="pl-4 text-neon-cyan">reroll            - Regenerate avatar (legacy)</div>
                 <div className="pl-4 text-neon-cyan">help              - Show this message</div>
+              </div>
+            )
+          };
+          break;
+
+        case 'guide':
+          response = {
+            id: Math.random().toString(),
+            type: 'system',
+            content: (
+              <div className="space-y-2 text-xs font-mono border-l-2 border-neon-cyan pl-3 my-2">
+                <div className="font-bold text-neon-cyan mb-2">=== INTERFACE TERMINOLOGY ===</div>
+                <div className="grid grid-cols-[120px_1fr] gap-y-1">
+                   <span className="text-matrix-green">LOGIN (Jack In)</span>
+                   <span className="text-titanium-grey/80">Connect wallet to authenticate and sync.</span>
+                   
+                   <span className="text-matrix-green">PUBLISH LOG</span>
+                   <span className="text-titanium-grey/80">"Engrave" a memory shard to the blockchain.</span>
+                   
+                   <span className="text-matrix-green">HIVE MIND</span>
+                   <span className="text-titanium-grey/80">Global feed of all public memory shards.</span>
+                   
+                   <span className="text-matrix-green">TERMINAL</span>
+                   <span className="text-titanium-grey/80">Command Line Interface for direct interaction.</span>
+                   
+                   <span className="text-matrix-green">ARCHIVE</span>
+                   <span className="text-titanium-grey/80">Your personal history of engraved memories.</span>
+                </div>
               </div>
             )
           };

@@ -62,6 +62,40 @@ describe('useTerminalCommands', () => {
     expect(setHistory).toHaveBeenCalledTimes(2); 
   });
 
+  it('should handle "guide" command', async () => {
+    const { result } = renderHook(() => useTerminalCommands({
+      setHistory,
+      setCommand,
+      setMode,
+      isConnected: true,
+      currentAddress: '0x123'
+    }));
+
+    act(() => {
+      result.current.handleCommand('guide');
+    });
+
+    // Wait for timeout (300ms)
+    await new Promise(r => setTimeout(r, 350));
+
+    // Check if history was updated
+    expect(setHistory).toHaveBeenCalledTimes(2);
+    
+    // Get the updater function from the last call
+    const lastCallArg = setHistory.mock.calls[1][0];
+    expect(typeof lastCallArg).toBe('function');
+    
+    // Simulate the update
+    const prevHistory: any[] = [];
+    const newHistory = lastCallArg(prevHistory);
+    
+    expect(newHistory).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: 'system',
+      })
+    ]));
+  });
+
   it('should handle "engrave" command when connected', async () => {
     const { result } = renderHook(() => useTerminalCommands({
       setHistory,
