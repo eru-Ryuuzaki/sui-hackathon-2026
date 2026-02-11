@@ -45,8 +45,6 @@ module engram::core {
         streak: u64,              // [New] Continuous engraving streak (days)
         vital_metrics: Metrics,
         shard_count: u64,
-        total_gas_burned: u64,    // [New] Total gas consumed (statistic)
-        is_granted: bool,         // [New] Has received newbie grant
     }
 
     /// Embedded struct for metrics
@@ -91,7 +89,8 @@ module engram::core {
         has_attachment: bool,
         // We emit the content (or hash) here. 
         // If encrypted, this is ciphertext.
-        content_snippet: String, 
+        content_snippet: String,
+        media_type: Option<String>,
     }
 
     public struct SubjectJackedInEvent has copy, drop {
@@ -150,8 +149,6 @@ module engram::core {
             streak: 0,
             vital_metrics: metrics,
             shard_count: 0,
-            total_gas_burned: 0,
-            is_granted: false,
         };
 
         // Update Global Stats
@@ -235,6 +232,7 @@ module engram::core {
             is_encrypted,
             has_attachment: option::is_some(&blob_id),
             content_snippet: if (is_encrypted) { string::utf8(b"[ENCRYPTED]") } else { content },
+            media_type,
         });
 
         check_and_mint_badge(construct, hive, ctx);

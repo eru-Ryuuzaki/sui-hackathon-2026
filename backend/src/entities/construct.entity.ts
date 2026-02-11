@@ -23,9 +23,6 @@ export class Construct {
   @Column({ type: 'int', default: 0 })
   streak: number;
 
-  @Column({ type: 'bigint', default: 100 })
-  energy: string;
-
   @Column({ type: 'int', default: 50 })
   focus: number;
 

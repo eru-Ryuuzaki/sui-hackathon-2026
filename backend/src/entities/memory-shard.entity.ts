@@ -34,6 +34,9 @@ export class MemoryShard {
   @Column({ nullable: true })
   blob_id: string;
 
+  @Column({ nullable: true })
+  media_type: string;
+
   @Column()
   tx_digest: string;
 }
