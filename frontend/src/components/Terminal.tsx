@@ -112,9 +112,39 @@ export function Terminal() {
             // Trigger background fetch
             fetchLogs(currentUser.constructId).then(logs => {
                 if (logs.length > 0) {
-                    setLogs(logs); // Replace local logs with chain data
-                    // Optional: Add notification in terminal?
-                    // setHistory(prev => [...prev, { id: Math.random().toString(), type: 'system', content: `> MEMORY SYNC COMPLETE: ${logs.length} FRAGMENTS RETRIEVED.` }]);
+                    // Merge logs with existing system logs to preserve mock data/intro logs
+                    // But filter out duplicates based on ID
+                    // Actually, useMemoryStore.setLogs overwrites everything.
+                    // We should merge with existing logs if we want to keep them.
+                    
+                    // Retrieve current logs from store (via getter if possible, or just optimistic merge)
+                    // Since we can't access state directly here easily without causing rerender loops if we add it to dependency,
+                    // let's assume we want to PREPEND chain logs to FIXED logs.
+                    
+                    // Actually, better strategy: 
+                    // Let setLogs handle the logic? No, setLogs is simple setter.
+                    // We should probably read current logs inside the effect? 
+                    // No, `logs` is not in dependency array to avoid loop.
+                    
+                    // Let's rely on useMemoryStore to have initial state (SYSTEM_LOGS)
+                    // And we just want to ADD the fetched logs.
+                    // But fetchLogs returns ALL user logs.
+                    // So we should combine [Fetched Logs] + [Fixed System Logs]
+                    
+                    // Import FIXED_LOGS from store? Or just keep what's in store that is "system" type?
+                    // Simpler: Just setLogs(logs) but ensure we append the fixed system logs if they are missing.
+                    // However, useMemoryStore already initializes with SYSTEM_LOGS.
+                    
+                    // Let's use a function updater if possible, or just force merge here.
+                    // We can't access FIXED_LOGS easily without exporting it.
+                    // Let's just append the fetched logs to the store's current state? 
+                    // But we want to avoid duplicates if we run this multiple times.
+                    
+                    setLogs((prevLogs) => {
+                        const existingIds = new Set(prevLogs.map(l => l.id));
+                        const newUniqueLogs = logs.filter(l => !existingIds.has(l.id));
+                        return [...newUniqueLogs, ...prevLogs].sort((a, b) => b.timestamp - a.timestamp);
+                    });
                 }
             });
         }

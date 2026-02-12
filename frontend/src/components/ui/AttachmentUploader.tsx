@@ -34,9 +34,10 @@ export function AttachmentUploader({ attachments, onAttachmentsChange, isEncrypt
   const loader = useGlobalLoader();
   
   // Warning State for Upload
-  const [showUploadWarning, setShowUploadWarning] = useState(() => {
-    return localStorage.getItem('ENGRAM_UPLOAD_WARNING') !== 'false';
-  });
+  // const [showUploadWarning, setShowUploadWarning] = useState(() => {
+  //   return localStorage.getItem('ENGRAM_UPLOAD_WARNING') !== 'false';
+  // });
+  // const [showUploadWarning, setShowUploadWarning] = useState(false); // Disabled for MVP
   const [isUploadWarningOpen, setIsUploadWarningOpen] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<FileList | null>(null);
   const [dontShowAgain, setDontShowAgain] = useState(false);
@@ -74,21 +75,30 @@ export function AttachmentUploader({ attachments, onAttachmentsChange, isEncrypt
     }
   };
 
+  const [showMvpWarning, setShowMvpWarning] = useState(false);
+
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
+    
+    // MVP Restriction: Block uploads for now
+    setShowMvpWarning(true);
+    return;
 
+    /* 
+    // Original Upload Logic (Disabled for MVP)
     if (showUploadWarning) {
         setPendingFiles(files);
         setIsUploadWarningOpen(true);
     } else {
         processFiles(files);
     }
+    */
   };
 
   const confirmUpload = () => {
     if (dontShowAgain) {
         localStorage.setItem('ENGRAM_UPLOAD_WARNING', 'false');
-        setShowUploadWarning(false);
+        // setShowUploadWarning(false);
     }
     setIsUploadWarningOpen(false);
     if (pendingFiles) {
@@ -253,6 +263,37 @@ export function AttachmentUploader({ attachments, onAttachmentsChange, isEncrypt
           </div>
         ))}
       </div>
+
+    {/* MVP Warning Modal */}
+    <GlitchModal
+        isOpen={showMvpWarning}
+        onClose={() => setShowMvpWarning(false)}
+        title="FEATURE LOCKED"
+        className="border-neon-cyan/50 shadow-[0_0_30px_rgba(0,243,255,0.2)] max-w-sm"
+    >
+        <div className="space-y-4 font-mono text-center">
+            <div className="flex justify-center mb-2">
+                <Lock size={32} className="text-neon-cyan animate-pulse" />
+            </div>
+            
+            <div className="text-sm font-bold text-neon-cyan uppercase tracking-widest">
+                Walrus Integration Unavailable
+            </div>
+            
+            <div className="text-xs text-titanium-grey leading-relaxed">
+                <p>The neural uplink to Walrus Decentralized Storage is currently offline for maintenance during the MVP phase.</p>
+                <br/>
+                <p className="opacity-70">Attachment uploads will be enabled in the upcoming protocol update.</p>
+            </div>
+
+            <button 
+                onClick={() => setShowMvpWarning(false)}
+                className="mt-2 px-6 py-2 bg-white/5 hover:bg-white/10 border border-titanium-grey/30 text-xs text-white transition-all uppercase tracking-wider"
+            >
+                ACKNOWLEDGE
+            </button>
+        </div>
+    </GlitchModal>
 
     {/* Upload Warning Modal */}
     <GlitchModal

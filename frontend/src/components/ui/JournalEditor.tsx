@@ -230,10 +230,14 @@ export function JournalEditor({ onExit, constructId }: JournalEditorProps) {
             // Trigger fetch from chain (via Indexer API) immediately
             // Instead of optimistic local update, we want to fetch the real deal.
             if (constructId) {
-                 // Fetch logs and replace local store
+                 // Fetch logs and merge with local store
                  fetchLogs(constructId).then(logs => {
                      if (logs.length > 0) {
-                         setLogs(logs);
+                         setLogs((prevLogs) => {
+                             const existingIds = new Set(prevLogs.map(l => l.id));
+                             const newUniqueLogs = logs.filter(l => !existingIds.has(l.id));
+                             return [...newUniqueLogs, ...prevLogs].sort((a, b) => b.timestamp - a.timestamp);
+                         });
                          console.log("Store synced with chain:", logs.length);
                      }
                  });
